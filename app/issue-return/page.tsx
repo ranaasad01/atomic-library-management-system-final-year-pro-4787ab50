@@ -2,43 +2,36 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { BookOpen, RotateCcw, Search, CheckCircle, Clock, AlertTriangle, User, Calendar, Hash, ChevronDown, ChevronUp, RefreshCw, X, Plus, Filter } from 'lucide-react';
+import { BookOpen, RotateCcw, Search, User, Calendar, CheckCircle, AlertCircle, Clock, ArrowRight, Hash, FileText, RefreshCw, BookMarked, DollarSign, ChevronRight, X } from 'lucide-react';
 import { Reveal } from "@/components/Reveal";
-import { fadeInUp, staggerContainer, scaleIn } from "@/lib/motion";
+import { staggerContainer, fadeInUp, scaleIn } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
+import { FINE_RATE_PER_DAY, DEFAULT_ISSUE_DAYS } from "@/lib/data";
 
-// ─── Local helpers (NOT imported from @/lib/data) ──────────────────────────────
-const FINE_RATE_PER_DAY = 5; // PKR per overdue day
-const DEFAULT_ISSUE_DAYS = 14;
+// ─── Types ──────────────────────────────────────────────────────────────────────
 
-function getIssueStatusLabel(status: string): string {
-  switch (status) {
-    case "issued": return "Issued";
-    case "returned": return "Returned";
-    case "overdue": return "Overdue";
-    default: return status;
-  }
+interface BookRow {
+  id: string;
+  title: string;
+  author: string;
+  isbn: string | null;
+  category: string | null;
+  available_copies: number;
+  total_copies: number;
+  shelf_location: string | null;
 }
 
-function calculateOverdueDays(dueDateStr: string, returnDateStr?: string | null): number {
-  const due = new Date(dueDateStr);
-  const ref = returnDateStr ? new Date(returnDateStr) : new Date();
-  const diffMs = ref.getTime() - due.getTime();
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  return Math.max(0, diffDays);
+interface UserRow {
+  id: string;
+  full_name: string;
+  email: string;
+  membership_number: string | null;
+  role: string;
+  is_active: boolean;
 }
 
-function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString("en-PK", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
-}
-
-// ─── Types ─────────────────────────────────────────────────────────────────────
-interface BookIssueRow {
+interface IssueRow {
   id: string;
   book_id: string;
   user_id: string;
@@ -49,776 +42,995 @@ interface BookIssueRow {
   status: string;
   remarks: string | null;
   created_at: string;
-  updated_at: string;
 }
 
-interface BookRow {
-  id: string;
-  title: string;
-  author: string;
-  isbn: string | null;
-  available_copies: number;
-  total_copies: number;
-  shelf_location: string | null;
-  category: string | null;
-}
-
-interface UserRow {
-  id: string;
-  full_name: string;
-  email: string;
-  membership_number: string | null;
-  role: string;
-}
-
-interface EnrichedIssue extends BookIssueRow {
+interface EnrichedIssue extends IssueRow {
   book?: BookRow;
   member?: UserRow;
-  overdue_days: number;
-  estimated_fine: number;
 }
 
-type TabType = "active" | "history" | "issue";
-type StatusFilter = "all" | "issued" | "overdue" | "returned";
+interface ReturnLookup {
+  issue: IssueRow;
+  book: BookRow | null;
+  member: UserRow | null;
+  overdueDays: number;
+  estimatedFine: number;
+}
 
-// ─── Status badge ──────────────────────────────────────────────────────────────
+// ─── Helpers ────────────────────────────────────────────────────────────────────
+
+function formatDate(dateStr: string): string {
+  return new Date(dateStr).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function calcOverdueDays(dueDateStr: string): number {
+  const due = new Date(dueDateStr);
+  const now = new Date();
+  const diff = now.getTime() - due.getTime();
+  return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+}
+
+function addDays(date: Date, days: number): string {
+  const d = new Date(date);
+  d.setDate(d.getDate() + days);
+  return d.toISOString().split("T")[0];
+}
+
+// ─── Status Badge ────────────────────────────────────────────────────────────────
+
 function StatusBadge({ status }: { status: string }) {
-  const cfg: Record<string, { label: string; cls: string }> = {
-    issued: { label: "Issued", cls: "bg-blue-100 text-blue-700 border-blue-200" },
-    returned: { label: "Returned", cls: "bg-green-100 text-green-700 border-green-200" },
-    overdue: { label: "Overdue", cls: "bg-red-100 text-red-700 border-red-200" },
+  const map: Record<string, { cls: string; icon: React.ReactNode; label: string }> = {
+    issued: {
+      cls: "bg-blue-50 text-blue-700 border-blue-200",
+      icon: <BookMarked className="h-3 w-3" />,
+      label: "Issued",
+    },
+    returned: {
+      cls: "bg-emerald-50 text-emerald-700 border-emerald-200",
+      icon: <CheckCircle className="h-3 w-3" />,
+      label: "Returned",
+    },
+    overdue: {
+      cls: "bg-red-50 text-red-700 border-red-200",
+      icon: <AlertCircle className="h-3 w-3" />,
+      label: "Overdue",
+    },
   };
-  const c = cfg[status] ?? { label: status, cls: "bg-gray-100 text-gray-600 border-gray-200" };
+  const entry = map[status] ?? {
+    cls: "bg-gray-50 text-gray-600 border-gray-200",
+    icon: <Clock className="h-3 w-3" />,
+    label: status,
+  };
   return (
-    <span className={cn("inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium", c.cls)}>
-      {status === "issued" && <Clock className="h-3 w-3" />}
-      {status === "returned" && <CheckCircle className="h-3 w-3" />}
-      {status === "overdue" && <AlertTriangle className="h-3 w-3" />}
-      {c.label}
+    <span
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-semibold",
+        entry.cls
+      )}
+    >
+      {entry.icon}
+      {entry.label}
     </span>
   );
 }
 
-// ─── Issue Form ────────────────────────────────────────────────────────────────
-function IssueForm({
-  books,
-  members,
-  currentUserId,
-  onSuccess,
+// ─── Field wrapper ───────────────────────────────────────────────────────────────
+
+function Field({
+  label,
+  icon: Icon,
+  children,
+  required,
 }: {
-  books: BookRow[];
-  members: UserRow[];
-  currentUserId: string;
-  onSuccess: () => void;
+  label: string;
+  icon?: React.ElementType;
+  children: React.ReactNode;
+  required?: boolean;
 }) {
-  const supabase = createClient();
-  const [bookId, setBookId] = useState("");
-  const [userId, setUserId] = useState("");
-  const [remarks, setRemarks] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
-
-  const selectedBook = books.find((b) => b.id === bookId);
-
-  const issueDate = new Date();
-  const dueDate = new Date(issueDate);
-  dueDate.setDate(dueDate.getDate() + DEFAULT_ISSUE_DAYS);
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!bookId || !userId) { setError("Please select both a book and a member."); return; }
-    if (!selectedBook || selectedBook.available_copies < 1) { setError("Selected book has no available copies."); return; }
-    setLoading(true);
-    setError(null);
-
-    const { error: insertErr } = await supabase.from("book_issues").insert({
-      book_id: bookId,
-      user_id: userId,
-      issued_by: currentUserId,
-      issue_date: issueDate.toISOString(),
-      due_date: dueDate.toISOString(),
-      status: "issued",
-      remarks: remarks || null,
-    });
-
-    if (insertErr) {
-      setError(insertErr.message);
-      setLoading(false);
-      return;
-    }
-
-    // Decrement available_copies
-    await supabase
-      .from("books")
-      .update({ available_copies: selectedBook.available_copies - 1 })
-      .eq("id", bookId);
-
-    // Log activity
-    await supabase.from("activity_logs").insert({
-      actor_id: currentUserId,
-      action_type: "book_issued",
-      entity_type: "book_issues",
-      description: `Book "${selectedBook.title}" issued to member.`,
-    });
-
-    setSuccess(true);
-    setBookId("");
-    setUserId("");
-    setRemarks("");
-    setLoading(false);
-    setTimeout(() => { setSuccess(false); onSuccess(); }, 1500);
-  }
-
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
-      {error && (
-        <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          <AlertTriangle className="h-4 w-4 shrink-0" /> {error}
-        </div>
-      )}
-      {success && (
-        <div className="flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700">
-          <CheckCircle className="h-4 w-4 shrink-0" /> Book issued successfully.
-        </div>
-      )}
-
-      <div className="grid gap-5 sm:grid-cols-2">
-        <div>
-          <label className="mb-1.5 block text-sm font-medium text-[var(--lms-navy)]">
-            Select Book <span className="text-red-500">*</span>
-          </label>
-          <select
-            value={bookId}
-            onChange={(e) => setBookId(e.target.value)}
-            className="w-full rounded-lg border border-[var(--lms-border)] bg-white px-3 py-2.5 text-sm text-[var(--lms-navy)] focus:border-[var(--lms-gold)] focus:outline-none focus:ring-2 focus:ring-[var(--lms-gold)]/20"
-          >
-            <option value="">-- Choose a book --</option>
-            {books.map((b) => (
-              <option key={b.id} value={b.id} disabled={b.available_copies < 1}>
-                {b.title} — {b.author} {b.available_copies < 1 ? "(Unavailable)" : `(${b.available_copies} left)`}
-              </option>
-            ))}
-          </select>
-          {selectedBook && (
-            <p className="mt-1 text-xs text-gray-500">
-              Shelf: {selectedBook.shelf_location ?? "N/A"} · ISBN: {selectedBook.isbn ?? "N/A"}
-            </p>
-          )}
-        </div>
-
-        <div>
-          <label className="mb-1.5 block text-sm font-medium text-[var(--lms-navy)]">
-            Select Member <span className="text-red-500">*</span>
-          </label>
-          <select
-            value={userId}
-            onChange={(e) => setUserId(e.target.value)}
-            className="w-full rounded-lg border border-[var(--lms-border)] bg-white px-3 py-2.5 text-sm text-[var(--lms-navy)] focus:border-[var(--lms-gold)] focus:outline-none focus:ring-2 focus:ring-[var(--lms-gold)]/20"
-          >
-            <option value="">-- Choose a member --</option>
-            {members.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.full_name} ({m.membership_number ?? m.email})
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      <div className="grid gap-5 sm:grid-cols-2">
-        <div>
-          <label className="mb-1.5 block text-sm font-medium text-[var(--lms-navy)]">Issue Date</label>
-          <div className="flex items-center gap-2 rounded-lg border border-[var(--lms-border)] bg-gray-50 px-3 py-2.5 text-sm text-gray-600">
-            <Calendar className="h-4 w-4 text-[var(--lms-gold)]" />
-            {issueDate.toLocaleDateString("en-PK", { year: "numeric", month: "short", day: "numeric" })}
-          </div>
-        </div>
-        <div>
-          <label className="mb-1.5 block text-sm font-medium text-[var(--lms-navy)]">Due Date (14 days)</label>
-          <div className="flex items-center gap-2 rounded-lg border border-[var(--lms-border)] bg-gray-50 px-3 py-2.5 text-sm text-gray-600">
-            <Calendar className="h-4 w-4 text-[var(--lms-gold)]" />
-            {dueDate.toLocaleDateString("en-PK", { year: "numeric", month: "short", day: "numeric" })}
-          </div>
-        </div>
-      </div>
-
-      <div>
-        <label className="mb-1.5 block text-sm font-medium text-[var(--lms-navy)]">Remarks (optional)</label>
-        <textarea
-          value={remarks}
-          onChange={(e) => setRemarks(e.target.value)}
-          rows={2}
-          placeholder="Any notes about this issue..."
-          className="w-full rounded-lg border border-[var(--lms-border)] bg-white px-3 py-2.5 text-sm text-[var(--lms-navy)] placeholder-gray-400 focus:border-[var(--lms-gold)] focus:outline-none focus:ring-2 focus:ring-[var(--lms-gold)]/20"
-        />
-      </div>
-
-      <button
-        type="submit"
-        disabled={loading}
-        className="flex items-center gap-2 rounded-lg bg-[var(--lms-navy)] px-6 py-2.5 text-sm font-semibold text-white transition-all duration-200 hover:bg-[var(--lms-navy)]/90 disabled:opacity-60"
-      >
-        {loading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-        {loading ? "Issuing..." : "Issue Book"}
-      </button>
-    </form>
-  );
-}
-
-// ─── Return Modal ──────────────────────────────────────────────────────────────
-function ReturnModal({
-  issue,
-  currentUserId,
-  onClose,
-  onSuccess,
-}: {
-  issue: EnrichedIssue;
-  currentUserId: string;
-  onClose: () => void;
-  onSuccess: () => void;
-}) {
-  const supabase = createClient();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const overdueDays = calculateOverdueDays(issue.due_date);
-  const fine = overdueDays * FINE_RATE_PER_DAY;
-
-  async function handleReturn() {
-    setLoading(true);
-    setError(null);
-    const returnDate = new Date().toISOString();
-
-    const { error: updateErr } = await supabase
-      .from("book_issues")
-      .update({ status: overdueDays > 0 ? "overdue" : "returned", return_date: returnDate })
-      .eq("id", issue.id);
-
-    if (updateErr) { setError(updateErr.message); setLoading(false); return; }
-
-    // Restore available_copies
-    if (issue.book) {
-      await supabase
-        .from("books")
-        .update({ available_copies: issue.book.available_copies + 1 })
-        .eq("id", issue.book_id);
-    }
-
-    // Create fine if overdue
-    if (overdueDays > 0) {
-      await supabase.from("fines").insert({
-        issue_id: issue.id,
-        user_id: issue.user_id,
-        overdue_days: overdueDays,
-        fine_per_day: FINE_RATE_PER_DAY,
-        total_amount: fine,
-        status: "pending",
-      });
-    }
-
-    // Log activity
-    await supabase.from("activity_logs").insert({
-      actor_id: currentUserId,
-      action_type: "book_returned",
-      entity_type: "book_issues",
-      entity_id: issue.id,
-      description: `Book "${issue.book?.title ?? issue.book_id}" returned.${overdueDays > 0 ? ` Fine: PKR ${fine}.` : ""}`,
-    });
-
-    setLoading(false);
-    onSuccess();
-    onClose();
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-        onClick={onClose}
-      />
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 16 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 16 }}
-        transition={{ duration: 0.25, ease: "easeOut" }}
-        className="relative z-10 w-full max-w-md rounded-2xl border border-[var(--lms-border)] bg-white p-6 shadow-[0_8px_40px_-8px_rgba(0,0,0,0.18)]"
-      >
-        <button onClick={onClose} className="absolute right-4 top-4 rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600">
-          <X className="h-4 w-4" />
-        </button>
-        <h3 className="text-lg font-bold text-[var(--lms-navy)]">Return Book</h3>
-        <p className="mt-1 text-sm text-gray-500">Confirm the return of the following book.</p>
-
-        <div className="mt-4 space-y-3 rounded-xl border border-[var(--lms-border)] bg-[var(--lms-cream)] p-4">
-          <div className="flex items-start gap-3">
-            <BookOpen className="mt-0.5 h-5 w-5 shrink-0 text-[var(--lms-gold)]" />
-            <div>
-              <p className="font-semibold text-[var(--lms-navy)]">{issue.book?.title ?? "Unknown Book"}</p>
-              <p className="text-sm text-gray-500">{issue.book?.author}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <User className="h-4 w-4 shrink-0 text-[var(--lms-gold)]" />
-            <p className="text-sm text-[var(--lms-navy)]">{issue.member?.full_name ?? "Unknown Member"}</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <Calendar className="h-4 w-4 shrink-0 text-[var(--lms-gold)]" />
-            <p className="text-sm text-[var(--lms-navy)]">Due: {formatDate(issue.due_date)}</p>
-          </div>
-        </div>
-
-        {overdueDays > 0 ? (
-          <div className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4">
-            <div className="flex items-center gap-2 text-red-700">
-              <AlertTriangle className="h-4 w-4" />
-              <span className="font-semibold">Overdue by {overdueDays} day{overdueDays !== 1 ? "s" : ""}</span>
-            </div>
-            <p className="mt-1 text-sm text-red-600">
-              A fine of <strong>PKR {fine.toLocaleString("en-PK")}</strong> will be generated at PKR {FINE_RATE_PER_DAY}/day.
-            </p>
-          </div>
-        ) : (
-          <div className="mt-4 rounded-xl border border-green-200 bg-green-50 p-4">
-            <div className="flex items-center gap-2 text-green-700">
-              <CheckCircle className="h-4 w-4" />
-              <span className="font-semibold">Returned on time. No fine applicable.</span>
-            </div>
-          </div>
-        )}
-
-        {error && (
-          <p className="mt-3 text-sm text-red-600">{error}</p>
-        )}
-
-        <div className="mt-5 flex gap-3">
-          <button
-            onClick={onClose}
-            className="flex-1 rounded-lg border border-[var(--lms-border)] px-4 py-2.5 text-sm font-medium text-gray-600 transition hover:bg-gray-50"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleReturn}
-            disabled={loading}
-            className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-[var(--lms-navy)] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[var(--lms-navy)]/90 disabled:opacity-60"
-          >
-            {loading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}
-            {loading ? "Processing..." : "Confirm Return"}
-          </button>
-        </div>
-      </motion.div>
+    <div className="flex flex-col gap-1.5">
+      <label className="flex items-center gap-1.5 text-sm font-medium text-[var(--foreground)]">
+        {Icon && <Icon className="h-3.5 w-3.5 text-[var(--accent)]" />}
+        {label}
+        {required && <span className="text-red-500">*</span>}
+      </label>
+      {children}
     </div>
   );
 }
 
-// ─── Transaction Row ───────────────────────────────────────────────────────────
-function TransactionRow({
-  issue,
-  onReturn,
-  expanded,
-  onToggle,
-}: {
-  issue: EnrichedIssue;
-  onReturn: (issue: EnrichedIssue) => void;
-  expanded: boolean;
-  onToggle: () => void;
-}) {
-  return (
-    <div className="rounded-xl border border-[var(--lms-border)] bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04)] transition-all duration-200 hover:shadow-[0_4px_16px_-4px_rgba(0,0,0,0.1)]">
-      <div
-        className="flex cursor-pointer items-center gap-4 p-4"
-        onClick={onToggle}
-      >
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--lms-navy)]/8">
-          <BookOpen className="h-5 w-5 text-[var(--lms-navy)]" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="truncate font-semibold text-[var(--lms-navy)]">
-            {issue.book?.title ?? "Unknown Book"}
-          </p>
-          <p className="truncate text-sm text-gray-500">
-            {issue.book?.author} · {issue.member?.full_name ?? "Unknown Member"}
-          </p>
-        </div>
-        <div className="hidden items-center gap-3 sm:flex">
-          <StatusBadge status={issue.status} />
-          {issue.overdue_days > 0 && issue.status !== "returned" && (
-            <span className="rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-700">
-              PKR {issue.estimated_fine.toLocaleString("en-PK")} fine
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          {issue.status === "issued" || issue.status === "overdue" ? (
-            <button
-              onClick={(e) => { e.stopPropagation(); onReturn(issue); }}
-              className="hidden rounded-lg border border-[var(--lms-gold)] px-3 py-1.5 text-xs font-semibold text-[var(--lms-gold)] transition hover:bg-[var(--lms-gold)] hover:text-white sm:block"
-            >
-              Return
-            </button>
-          ) : null}
-          {expanded ? <ChevronUp className="h-4 w-4 text-gray-400" /> : <ChevronDown className="h-4 w-4 text-gray-400" />}
-        </div>
-      </div>
+const inputCls =
+  "w-full rounded-xl border border-[var(--border)] bg-white px-3.5 py-2.5 text-sm text-[var(--foreground)] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40 focus:border-[var(--accent)] transition-all duration-200 shadow-sm";
 
-      <AnimatePresence>
-        {expanded && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-            className="overflow-hidden"
-          >
-            <div className="border-t border-[var(--lms-border)] bg-[var(--lms-cream)] px-4 py-4">
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                <div>
-                  <p className="text-xs font-medium uppercase tracking-wide text-gray-400">Issue Date</p>
-                  <p className="mt-0.5 text-sm font-medium text-[var(--lms-navy)]">{formatDate(issue.issue_date)}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-medium uppercase tracking-wide text-gray-400">Due Date</p>
-                  <p className="mt-0.5 text-sm font-medium text-[var(--lms-navy)]">{formatDate(issue.due_date)}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-medium uppercase tracking-wide text-gray-400">Return Date</p>
-                  <p className="mt-0.5 text-sm font-medium text-[var(--lms-navy)]">
-                    {issue.return_date ? formatDate(issue.return_date) : "Not returned"}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs font-medium uppercase tracking-wide text-gray-400">Membership No.</p>
-                  <p className="mt-0.5 text-sm font-medium text-[var(--lms-navy)]">
-                    {issue.member?.membership_number ?? "N/A"}
-                  </p>
-                </div>
-                {issue.remarks && (
-                  <div className="sm:col-span-2 lg:col-span-4">
-                    <p className="text-xs font-medium uppercase tracking-wide text-gray-400">Remarks</p>
-                    <p className="mt-0.5 text-sm text-gray-600">{issue.remarks}</p>
-                  </div>
-                )}
-              </div>
-              <div className="mt-3 flex items-center gap-3 sm:hidden">
-                <StatusBadge status={issue.status} />
-                {(issue.status === "issued" || issue.status === "overdue") && (
-                  <button
-                    onClick={() => onReturn(issue)}
-                    className="rounded-lg border border-[var(--lms-gold)] px-3 py-1.5 text-xs font-semibold text-[var(--lms-gold)] transition hover:bg-[var(--lms-gold)] hover:text-white"
-                  >
-                    Return Book
-                  </button>
-                )}
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
+// ─── Main Page ───────────────────────────────────────────────────────────────────
 
-// ─── Page ──────────────────────────────────────────────────────────────────────
 export default function IssueReturnPage() {
   const supabase = createClient();
 
-  const [activeTab, setActiveTab] = useState<TabType>("active");
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [issues, setIssues] = useState<EnrichedIssue[]>([]);
-  const [books, setBooks] = useState<BookRow[]>([]);
-  const [members, setMembers] = useState<UserRow[]>([]);
-  const [currentUserId, setCurrentUserId] = useState<string>("");
-  const [loading, setLoading] = useState(true);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [returnTarget, setReturnTarget] = useState<EnrichedIssue | null>(null);
+  // ── Issue form state ──
+  const [issueBookId, setIssueBookId] = useState("");
+  const [issueMemberId, setIssueMemberId] = useState("");
+  const [issueRemarks, setIssueRemarks] = useState("");
+  const [issueLoading, setIssueLoading] = useState(false);
+  const [issueError, setIssueError] = useState<string | null>(null);
+  const [issueSuccess, setIssueSuccess] = useState<string | null>(null);
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
+  // Book/member search for issue
+  const [bookSearch, setBookSearch] = useState("");
+  const [bookResults, setBookResults] = useState<BookRow[]>([]);
+  const [selectedBook, setSelectedBook] = useState<BookRow | null>(null);
+  const [memberSearch, setMemberSearch] = useState("");
+  const [memberResults, setMemberResults] = useState<UserRow[]>([]);
+  const [selectedMember, setSelectedMember] = useState<UserRow | null>(null);
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) setCurrentUserId(user.id);
+  // ── Return form state ──
+  const [returnIssueId, setReturnIssueId] = useState("");
+  const [returnLookup, setReturnLookup] = useState<ReturnLookup | null>(null);
+  const [returnLoading, setReturnLoading] = useState(false);
+  const [returnError, setReturnError] = useState<string | null>(null);
+  const [returnSuccess, setReturnSuccess] = useState<string | null>(null);
+  const [confirmReturn, setConfirmReturn] = useState(false);
 
-    const [issuesRes, booksRes, membersRes] = await Promise.all([
-      supabase.from("book_issues").select("*").order("created_at", { ascending: false }),
-      supabase.from("books").select("id, title, author, isbn, available_copies, total_copies, shelf_location, category"),
-      supabase.from("users").select("id, full_name, email, membership_number, role"),
-    ]);
+  // ── Transactions table ──
+  const [transactions, setTransactions] = useState<EnrichedIssue[]>([]);
+  const [txLoading, setTxLoading] = useState(true);
+  const [txFilter, setTxFilter] = useState<"all" | "issued" | "returned" | "overdue">("all");
 
-    const bookMap = new Map<string, BookRow>((booksRes.data ?? []).map((b) => [b.id, b]));
-    const memberMap = new Map<string, UserRow>((membersRes.data ?? []).map((m) => [m.id, m]));
+  // ── Current user ──
+  const [currentUser, setCurrentUser] = useState<{ id: string; role: string } | null>(null);
 
-    const enriched: EnrichedIssue[] = (issuesRes.data ?? []).map((issue) => {
-      const overdueDays = issue.status !== "returned" ? calculateOverdueDays(issue.due_date) : 0;
-      return {
-        ...issue,
-        book: bookMap.get(issue.book_id),
-        member: memberMap.get(issue.user_id),
-        overdue_days: overdueDays,
-        estimated_fine: overdueDays * FINE_RATE_PER_DAY,
-      };
-    });
-
-    setIssues(enriched);
-    setBooks(booksRes.data ?? []);
-    setMembers((membersRes.data ?? []).filter((m) => m.role === "member"));
-    setLoading(false);
-  }, [supabase]);
+  // ─── Load current user ───────────────────────────────────────────────────────
 
   useEffect(() => {
-    fetchData();
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!session?.user) return;
+      const { data: profile } = await supabase
+        .from("users")
+        .select("id, role")
+        .eq("id", session.user.id)
+        .single();
+      if (profile) setCurrentUser({ id: profile.id, role: profile.role });
+    });
+  }, []);
 
-    const channel = supabase
-      .channel("book_issues_realtime")
-      .on("postgres_changes", { event: "*", schema: "public", table: "book_issues" }, () => {
-        fetchData();
-      })
-      .subscribe();
+  // ─── Load transactions ───────────────────────────────────────────────────────
 
-    return () => { supabase.removeChannel(channel); };
-  }, [fetchData, supabase]);
+  const loadTransactions = useCallback(async () => {
+    setTxLoading(true);
+    try {
+      const { data: issues } = await supabase
+        .from("book_issues")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(50);
 
-  // Derived stats
-  const totalIssued = issues.filter((i) => i.status === "issued").length;
-  const totalOverdue = issues.filter((i) => i.status === "overdue").length;
-  const totalReturned = issues.filter((i) => i.status === "returned").length;
-  const totalFinesPending = issues
-    .filter((i) => i.status !== "returned" && i.overdue_days > 0)
-    .reduce((sum, i) => sum + i.estimated_fine, 0);
+      if (!issues) { setTransactions([]); return; }
 
-  // Filtered list
-  const filteredIssues = issues.filter((issue) => {
-    const matchesTab =
-      activeTab === "history"
-        ? issue.status === "returned"
-        : issue.status === "issued" || issue.status === "overdue";
-    const matchesStatus = statusFilter === "all" || issue.status === statusFilter;
-    const q = searchQuery.toLowerCase();
-    const matchesSearch =
-      !q ||
-      issue.book?.title.toLowerCase().includes(q) ||
-      issue.book?.author.toLowerCase().includes(q) ||
-      issue.member?.full_name.toLowerCase().includes(q) ||
-      issue.member?.membership_number?.toLowerCase().includes(q) ||
-      issue.book?.isbn?.toLowerCase().includes(q);
-    return matchesTab && matchesStatus && matchesSearch;
-  });
+      const bookIds = [...new Set(issues.map((i) => i.book_id))];
+      const userIds = [...new Set(issues.map((i) => i.user_id))];
 
-  const tabs: { id: TabType; label: string; count?: number }[] = [
-    { id: "active", label: "Active Issues", count: totalIssued + totalOverdue },
-    { id: "history", label: "Return History", count: totalReturned },
-    { id: "issue", label: "Issue a Book" },
-  ];
+      const [{ data: books }, { data: members }] = await Promise.all([
+        supabase.from("books").select("id,title,author,isbn,category,shelf_location,available_copies,total_copies").in("id", bookIds),
+        supabase.from("users").select("id,full_name,email,membership_number,role,is_active").in("id", userIds),
+      ]);
+
+      const bookMap = Object.fromEntries((books ?? []).map((b) => [b.id, b]));
+      const memberMap = Object.fromEntries((members ?? []).map((m) => [m.id, m]));
+
+      const enriched: EnrichedIssue[] = issues.map((issue) => ({
+        ...issue,
+        book: bookMap[issue.book_id],
+        member: memberMap[issue.user_id],
+      }));
+
+      setTransactions(enriched);
+    } catch (err) {
+      console.error("Failed to load transactions:", err);
+    } finally {
+      setTxLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadTransactions(); }, [loadTransactions]);
+
+  // ─── Book search ─────────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    if (bookSearch.trim().length < 2) { setBookResults([]); return; }
+    const timer = setTimeout(async () => {
+      const { data } = await supabase
+        .from("books")
+        .select("id,title,author,isbn,category,available_copies,total_copies,shelf_location")
+        .or(`title.ilike.%${bookSearch}%,author.ilike.%${bookSearch}%,isbn.ilike.%${bookSearch}%`)
+        .limit(6);
+      setBookResults(data ?? []);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [bookSearch]);
+
+  // ─── Member search ───────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    if (memberSearch.trim().length < 2) { setMemberResults([]); return; }
+    const timer = setTimeout(async () => {
+      const { data } = await supabase
+        .from("users")
+        .select("id,full_name,email,membership_number,role,is_active")
+        .or(`full_name.ilike.%${memberSearch}%,email.ilike.%${memberSearch}%,membership_number.ilike.%${memberSearch}%`)
+        .eq("is_active", true)
+        .limit(6);
+      setMemberResults(data ?? []);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [memberSearch]);
+
+  // ─── Issue book ──────────────────────────────────────────────────────────────
+
+  async function handleIssue(e: React.FormEvent) {
+    e.preventDefault();
+    if (!selectedBook || !selectedMember || !currentUser) {
+      setIssueError("Please select a book and a member.");
+      return;
+    }
+    if (selectedBook.available_copies < 1) {
+      setIssueError("No copies available for this book.");
+      return;
+    }
+    setIssueLoading(true);
+    setIssueError(null);
+    setIssueSuccess(null);
+    try {
+      const today = new Date();
+      const dueDate = addDays(today, DEFAULT_ISSUE_DAYS);
+
+      const { error: issueErr } = await supabase.from("book_issues").insert({
+        book_id: selectedBook.id,
+        user_id: selectedMember.id,
+        issued_by: currentUser.id,
+        issue_date: today.toISOString().split("T")[0],
+        due_date: dueDate,
+        status: "issued",
+        remarks: issueRemarks || null,
+      });
+
+      if (issueErr) throw new Error(issueErr.message);
+
+      await supabase
+        .from("books")
+        .update({ available_copies: selectedBook.available_copies - 1 })
+        .eq("id", selectedBook.id);
+
+      setIssueSuccess(
+        `"${selectedBook.title}" issued to ${selectedMember.full_name}. Due: ${formatDate(dueDate)}`
+      );
+      setSelectedBook(null);
+      setSelectedMember(null);
+      setBookSearch("");
+      setMemberSearch("");
+      setIssueRemarks("");
+      loadTransactions();
+    } catch (err) {
+      setIssueError(err instanceof Error ? err.message : "Failed to issue book.");
+    } finally {
+      setIssueLoading(false);
+    }
+  }
+
+  // ─── Return lookup ───────────────────────────────────────────────────────────
+
+  async function handleReturnLookup(e: React.FormEvent) {
+    e.preventDefault();
+    if (!returnIssueId.trim()) { setReturnError("Enter a transaction ID."); return; }
+    setReturnLoading(true);
+    setReturnError(null);
+    setReturnLookup(null);
+    setConfirmReturn(false);
+    try {
+      const { data: issue, error: issueErr } = await supabase
+        .from("book_issues")
+        .select("*")
+        .eq("id", returnIssueId.trim())
+        .single();
+
+      if (issueErr || !issue) throw new Error("Transaction not found.");
+      if (issue.status === "returned") throw new Error("This book has already been returned.");
+
+      const [{ data: book }, { data: member }] = await Promise.all([
+        supabase.from("books").select("id,title,author,isbn,category,available_copies,total_copies,shelf_location").eq("id", issue.book_id).single(),
+        supabase.from("users").select("id,full_name,email,membership_number,role,is_active").eq("id", issue.user_id).single(),
+      ]);
+
+      const overdueDays = calcOverdueDays(issue.due_date);
+      const estimatedFine = overdueDays * FINE_RATE_PER_DAY;
+
+      setReturnLookup({ issue, book: book ?? null, member: member ?? null, overdueDays, estimatedFine });
+    } catch (err) {
+      setReturnError(err instanceof Error ? err.message : "Lookup failed.");
+    } finally {
+      setReturnLoading(false);
+    }
+  }
+
+  // ─── Confirm return ──────────────────────────────────────────────────────────
+
+  async function handleConfirmReturn() {
+    if (!returnLookup || !currentUser) return;
+    setReturnLoading(true);
+    setReturnError(null);
+    try {
+      const today = new Date().toISOString().split("T")[0];
+
+      const { error: updateErr } = await supabase
+        .from("book_issues")
+        .update({ status: "returned", return_date: today })
+        .eq("id", returnLookup.issue.id);
+
+      if (updateErr) throw new Error(updateErr.message);
+
+      if (returnLookup.book) {
+        await supabase
+          .from("books")
+          .update({ available_copies: returnLookup.book.available_copies + 1 })
+          .eq("id", returnLookup.book.id);
+      }
+
+      if (returnLookup.overdueDays > 0) {
+        await supabase.from("fines").insert({
+          issue_id: returnLookup.issue.id,
+          user_id: returnLookup.issue.user_id,
+          overdue_days: returnLookup.overdueDays,
+          fine_per_day: FINE_RATE_PER_DAY,
+          total_amount: returnLookup.estimatedFine,
+          status: "pending",
+        });
+      }
+
+      setReturnSuccess(
+        `"${returnLookup.book?.title ?? "Book"}" returned successfully.${
+          returnLookup.overdueDays > 0
+            ? ` Fine of PKR ${returnLookup.estimatedFine} has been recorded.`
+            : ""
+        }`
+      );
+      setReturnIssueId("");
+      setReturnLookup(null);
+      setConfirmReturn(false);
+      loadTransactions();
+    } catch (err) {
+      setReturnError(err instanceof Error ? err.message : "Return failed.");
+    } finally {
+      setReturnLoading(false);
+    }
+  }
+
+  // ─── Filtered transactions ───────────────────────────────────────────────────
+
+  const filteredTx = transactions.filter((t) =>
+    txFilter === "all" ? true : t.status === txFilter
+  );
+
+  const txCounts = {
+    all: transactions.length,
+    issued: transactions.filter((t) => t.status === "issued").length,
+    returned: transactions.filter((t) => t.status === "returned").length,
+    overdue: transactions.filter((t) => t.status === "overdue").length,
+  };
+
+  // ─── Render ──────────────────────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen bg-[var(--lms-cream)]">
-      {/* Page Header */}
-      <Reveal>
-        <div className="border-b border-[var(--lms-border)] bg-white">
-          <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h1 className="text-2xl font-bold tracking-tight text-[var(--lms-navy)] sm:text-3xl">
-                  Issue &amp; Return
-                </h1>
-                <p className="mt-1 text-sm text-gray-500">
-                  Manage book loans, process returns, and track overdue transactions.
-                </p>
+    <div className="min-h-screen bg-[var(--background)]">
+      {/* ── Page Header ── */}
+      <div className="relative overflow-hidden bg-[var(--primary)]">
+        {/* Decorative background elements */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-[var(--accent)] blur-3xl" />
+          <div className="absolute -bottom-16 -left-16 w-64 h-64 rounded-full bg-white blur-3xl" />
+        </div>
+        <div className="absolute inset-0" style={{ backgroundImage: "radial-gradient(circle at 70% 50%, rgba(200,169,110,0.15) 0%, transparent 60%)" }} />
+
+        <div className="relative container-lms py-12 md:py-16">
+          <motion.div
+            variants={fadeInUp}
+            initial="hidden"
+            animate="visible"
+            className="max-w-2xl"
+          >
+            <div className="flex items-center gap-2 mb-4">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--accent)]/20 border border-[var(--accent)]/30 px-3 py-1 text-xs font-semibold text-[var(--accent)] uppercase tracking-wide">
+                <BookMarked className="h-3 w-3" />
+                Transactions
+              </span>
+            </div>
+            <h1 className="text-3xl md:text-4xl font-bold text-white tracking-tight text-balance">
+              Issue &amp; Return
+            </h1>
+            <p className="mt-3 text-white/70 text-base leading-relaxed max-w-lg">
+              Issue books to library members and process returns. Overdue fines are calculated automatically at PKR {FINE_RATE_PER_DAY}/day.
+            </p>
+
+            {/* Quick stats */}
+            <div className="mt-6 flex flex-wrap gap-4">
+              {[
+                { label: "Active Issues", value: txCounts.issued, icon: BookOpen },
+                { label: "Overdue", value: txCounts.overdue, icon: AlertCircle },
+                { label: "Returned", value: txCounts.returned, icon: CheckCircle },
+              ].map(({ label, value, icon: Icon }) => (
+                <div key={label} className="flex items-center gap-2 bg-white/10 backdrop-blur-sm rounded-xl px-4 py-2.5 border border-white/15">
+                  <Icon className="h-4 w-4 text-[var(--accent)]" />
+                  <span className="text-white font-bold text-lg leading-none">{value}</span>
+                  <span className="text-white/60 text-xs">{label}</span>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        </div>
+      </div>
+
+      {/* ── Main Content ── */}
+      <div className="container-lms py-10">
+        {/* ── Issue & Return Forms ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-10">
+
+          {/* ── Issue Form ── */}
+          <Reveal>
+            <div className="bg-white rounded-2xl border border-[var(--border)] shadow-[0_2px_8px_rgba(30,58,95,0.08),0_8px_24px_rgba(30,58,95,0.06)] overflow-hidden">
+              {/* Card header */}
+              <div className="px-6 py-4 border-b border-[var(--border)] bg-gradient-to-r from-[var(--primary)]/5 to-transparent flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-[var(--primary)] flex items-center justify-center flex-shrink-0">
+                  <BookOpen className="h-4.5 w-4.5 text-white" style={{ width: 18, height: 18 }} />
+                </div>
+                <div>
+                  <h2 className="text-base font-semibold text-[var(--foreground)]">Issue a Book</h2>
+                  <p className="text-xs text-slate-500">{DEFAULT_ISSUE_DAYS}-day loan period from today</p>
+                </div>
               </div>
+
+              <form onSubmit={handleIssue} className="p-6 flex flex-col gap-5">
+                {/* Book search */}
+                <Field label="Book" icon={BookOpen} required>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                    <input
+                      type="text"
+                      placeholder="Search by title, author, or ISBN..."
+                      value={selectedBook ? selectedBook.title : bookSearch}
+                      onChange={(e) => {
+                        setSelectedBook(null);
+                        setBookSearch(e.target.value);
+                      }}
+                      className={cn(inputCls, "pl-9")}
+                    />
+                    {selectedBook && (
+                      <button
+                        type="button"
+                        onClick={() => { setSelectedBook(null); setBookSearch(""); }}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                  {/* Book dropdown */}
+                  <AnimatePresence>
+                    {bookResults.length > 0 && !selectedBook && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
+                        className="mt-1 rounded-xl border border-[var(--border)] bg-white shadow-lg overflow-hidden z-10 relative"
+                      >
+                        {bookResults.map((book) => (
+                          <button
+                            key={book.id}
+                            type="button"
+                            onClick={() => { setSelectedBook(book); setBookSearch(""); setBookResults([]); }}
+                            className="w-full text-left px-4 py-3 hover:bg-[var(--muted)] transition-colors border-b border-[var(--border)] last:border-0 flex items-center justify-between gap-3"
+                          >
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-[var(--foreground)] truncate">{book.title}</p>
+                              <p className="text-xs text-slate-500 truncate">{book.author}</p>
+                            </div>
+                            <span className={cn(
+                              "flex-shrink-0 text-xs font-semibold rounded-full px-2 py-0.5",
+                              book.available_copies > 0
+                                ? "bg-emerald-50 text-emerald-700"
+                                : "bg-red-50 text-red-600"
+                            )}>
+                              {book.available_copies > 0 ? `${book.available_copies} avail.` : "None"}
+                            </span>
+                          </button>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* Selected book preview */}
+                  <AnimatePresence>
+                    {selectedBook && (
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.98 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.98 }}
+                        className="mt-2 rounded-xl border border-[var(--accent)]/30 bg-[var(--accent)]/5 p-3 flex items-start gap-3"
+                      >
+                        <div className="w-8 h-8 rounded-lg bg-[var(--accent)]/20 flex items-center justify-center flex-shrink-0">
+                          <BookOpen className="h-4 w-4 text-[var(--accent)]" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-semibold text-[var(--foreground)] truncate">{selectedBook.title}</p>
+                          <p className="text-xs text-slate-500">{selectedBook.author}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            {selectedBook.isbn && <span className="text-xs text-slate-400">ISBN: {selectedBook.isbn}</span>}
+                            <span className={cn(
+                              "text-xs font-medium rounded-full px-2 py-0.5",
+                              selectedBook.available_copies > 0 ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-600"
+                            )}>
+                              {selectedBook.available_copies} / {selectedBook.total_copies} available
+                            </span>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </Field>
+
+                {/* Member search */}
+                <Field label="Member" icon={User} required>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                    <input
+                      type="text"
+                      placeholder="Search by name, email, or membership no..."
+                      value={selectedMember ? selectedMember.full_name : memberSearch}
+                      onChange={(e) => {
+                        setSelectedMember(null);
+                        setMemberSearch(e.target.value);
+                      }}
+                      className={cn(inputCls, "pl-9")}
+                    />
+                    {selectedMember && (
+                      <button
+                        type="button"
+                        onClick={() => { setSelectedMember(null); setMemberSearch(""); }}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                  {/* Member dropdown */}
+                  <AnimatePresence>
+                    {memberResults.length > 0 && !selectedMember && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -4 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -4 }}
+                        className="mt-1 rounded-xl border border-[var(--border)] bg-white shadow-lg overflow-hidden z-10 relative"
+                      >
+                        {memberResults.map((member) => (
+                          <button
+                            key={member.id}
+                            type="button"
+                            onClick={() => { setSelectedMember(member); setMemberSearch(""); setMemberResults([]); }}
+                            className="w-full text-left px-4 py-3 hover:bg-[var(--muted)] transition-colors border-b border-[var(--border)] last:border-0 flex items-center gap-3"
+                          >
+                            <div className="w-7 h-7 rounded-full bg-[var(--primary)]/10 flex items-center justify-center flex-shrink-0">
+                              <User className="h-3.5 w-3.5 text-[var(--primary)]" />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-[var(--foreground)] truncate">{member.full_name}</p>
+                              <p className="text-xs text-slate-500 truncate">{member.email}</p>
+                            </div>
+                            {member.membership_number && (
+                              <span className="ml-auto flex-shrink-0 text-xs text-slate-400 font-mono">{member.membership_number}</span>
+                            )}
+                          </button>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* Selected member preview */}
+                  <AnimatePresence>
+                    {selectedMember && (
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.98 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.98 }}
+                        className="mt-2 rounded-xl border border-[var(--primary)]/20 bg-[var(--primary)]/5 p-3 flex items-center gap-3"
+                      >
+                        <div className="w-8 h-8 rounded-full bg-[var(--primary)]/15 flex items-center justify-center flex-shrink-0">
+                          <User className="h-4 w-4 text-[var(--primary)]" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-semibold text-[var(--foreground)]">{selectedMember.full_name}</p>
+                          <p className="text-xs text-slate-500">{selectedMember.email}</p>
+                        </div>
+                        {selectedMember.membership_number && (
+                          <span className="text-xs font-mono text-slate-400 bg-white rounded-lg px-2 py-1 border border-[var(--border)]">
+                            {selectedMember.membership_number}
+                          </span>
+                        )}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </Field>
+
+                {/* Remarks */}
+                <Field label="Remarks" icon={FileText}>
+                  <textarea
+                    rows={2}
+                    placeholder="Optional notes about this transaction..."
+                    value={issueRemarks}
+                    onChange={(e) => setIssueRemarks(e.target.value)}
+                    className={cn(inputCls, "resize-none")}
+                  />
+                </Field>
+
+                {/* Due date preview */}
+                <div className="flex items-center gap-2 rounded-xl bg-[var(--muted)] px-4 py-3 border border-[var(--border)]">
+                  <Calendar className="h-4 w-4 text-[var(--accent)] flex-shrink-0" />
+                  <span className="text-sm text-slate-600">
+                    Due date: <span className="font-semibold text-[var(--foreground)]">{formatDate(addDays(new Date(), DEFAULT_ISSUE_DAYS))}</span>
+                    <span className="text-slate-400 ml-1">({DEFAULT_ISSUE_DAYS} days from today)</span>
+                  </span>
+                </div>
+
+                {/* Feedback */}
+                <AnimatePresence>
+                  {issueError && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -4 }}
+                      className="flex items-start gap-2 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700"
+                    >
+                      <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                      {issueError}
+                    </motion.div>
+                  )}
+                  {issueSuccess && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -4 }}
+                      className="flex items-start gap-2 rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-700"
+                    >
+                      <CheckCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                      {issueSuccess}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Submit */}
+                <button
+                  type="submit"
+                  disabled={issueLoading || !selectedBook || !selectedMember}
+                  className="w-full flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{
+                    background: "linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%)",
+                    boxShadow: "0 2px 8px rgba(200,169,110,0.35)",
+                  }}
+                >
+                  {issueLoading ? (
+                    <><RefreshCw className="h-4 w-4 animate-spin" /> Processing...</>
+                  ) : (
+                    <><BookOpen className="h-4 w-4" /> Issue Book<ArrowRight className="h-4 w-4" /></>
+                  )}
+                </button>
+              </form>
+            </div>
+          </Reveal>
+
+          {/* ── Return Form ── */}
+          <Reveal delay={0.08}>
+            <div className="bg-white rounded-2xl border border-[var(--border)] shadow-[0_2px_8px_rgba(30,58,95,0.08),0_8px_24px_rgba(30,58,95,0.06)] overflow-hidden">
+              {/* Card header */}
+              <div className="px-6 py-4 border-b border-[var(--border)] bg-gradient-to-r from-emerald-50 to-transparent flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-emerald-600 flex items-center justify-center flex-shrink-0">
+                  <RotateCcw className="h-4 w-4 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-base font-semibold text-[var(--foreground)]">Return a Book</h2>
+                  <p className="text-xs text-slate-500">Look up by transaction ID to process return</p>
+                </div>
+              </div>
+
+              <div className="p-6 flex flex-col gap-5">
+                {/* Lookup form */}
+                <form onSubmit={handleReturnLookup} className="flex flex-col gap-4">
+                  <Field label="Transaction ID" icon={Hash} required>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="Paste the issue transaction ID..."
+                        value={returnIssueId}
+                        onChange={(e) => setReturnIssueId(e.target.value)}
+                        className={cn(inputCls, "flex-1 font-mono text-xs")}
+                      />
+                      <button
+                        type="submit"
+                        disabled={returnLoading || !returnIssueId.trim()}
+                        className="flex-shrink-0 flex items-center gap-1.5 rounded-xl bg-[var(--primary)] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[var(--primary-hover)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {returnLoading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                        Look up
+                      </button>
+                    </div>
+                  </Field>
+                </form>
+
+                {/* Return error */}
+                <AnimatePresence>
+                  {returnError && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -4 }}
+                      className="flex items-start gap-2 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700"
+                    >
+                      <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                      {returnError}
+                    </motion.div>
+                  )}
+                  {returnSuccess && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -4 }}
+                      className="flex items-start gap-2 rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-3 text-sm text-emerald-700"
+                    >
+                      <CheckCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                      {returnSuccess}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Lookup result */}
+                <AnimatePresence>
+                  {returnLookup && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 8 }}
+                      className="flex flex-col gap-4"
+                    >
+                      {/* Book info card */}
+                      <div className="rounded-xl border border-[var(--border)] bg-[var(--muted)] p-4">
+                        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">Transaction Details</p>
+                        <div className="flex items-start gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-[var(--primary)]/10 flex items-center justify-center flex-shrink-0">
+                            <BookOpen className="h-5 w-5 text-[var(--primary)]" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-[var(--foreground)] truncate">
+                              {returnLookup.book?.title ?? "Unknown Book"}
+                            </p>
+                            <p className="text-sm text-slate-500">{returnLookup.book?.author}</p>
+                            <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1">
+                              <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                                <User className="h-3 w-3" />
+                                {returnLookup.member?.full_name ?? "Unknown"}
+                              </div>
+                              <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                                <Calendar className="h-3 w-3" />
+                                Issued: {formatDate(returnLookup.issue.issue_date)}
+                              </div>
+                              <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                                <Clock className="h-3 w-3" />
+                                Due: {formatDate(returnLookup.issue.due_date)}
+                              </div>
+                              <div>
+                                <StatusBadge status={returnLookup.issue.status} />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Fine preview */}
+                      {returnLookup.overdueDays > 0 ? (
+                        <div className="rounded-xl border border-red-200 bg-red-50 p-4">
+                          <div className="flex items-center gap-2 mb-2">
+                            <AlertCircle className="h-4 w-4 text-red-600" />
+                            <p className="text-sm font-semibold text-red-700">Overdue Fine</p>
+                          </div>
+                          <div className="grid grid-cols-3 gap-3 text-center">
+                            <div className="bg-white rounded-lg p-2 border border-red-100">
+                              <p className="text-lg font-bold text-red-700">{returnLookup.overdueDays}</p>
+                              <p className="text-xs text-red-500">Days overdue</p>
+                            </div>
+                            <div className="bg-white rounded-lg p-2 border border-red-100">
+                              <p className="text-lg font-bold text-red-700">PKR {FINE_RATE_PER_DAY}</p>
+                              <p className="text-xs text-red-500">Per day</p>
+                            </div>
+                            <div className="bg-white rounded-lg p-2 border border-red-100">
+                              <p className="text-lg font-bold text-red-700">PKR {returnLookup.estimatedFine}</p>
+                              <p className="text-xs text-red-500">Total fine</p>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 flex items-center gap-2">
+                          <CheckCircle className="h-4 w-4 text-emerald-600" />
+                          <p className="text-sm text-emerald-700 font-medium">No overdue fine. Returned on time.</p>
+                        </div>
+                      )}
+
+                      {/* Confirm button */}
+                      <button
+                        onClick={handleConfirmReturn}
+                        disabled={returnLoading}
+                        className="w-full flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_2px_8px_rgba(39,174,96,0.3)]"
+                      >
+                        {returnLoading ? (
+                          <><RefreshCw className="h-4 w-4 animate-spin" /> Processing...</>
+                        ) : (
+                          <><CheckCircle className="h-4 w-4" /> Confirm Return</>
+                        )}
+                      </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Empty state */}
+                {!returnLookup && !returnError && !returnSuccess && (
+                  <div className="flex flex-col items-center justify-center py-10 text-center">
+                    <div className="w-14 h-14 rounded-2xl bg-[var(--muted)] flex items-center justify-center mb-3">
+                      <RotateCcw className="h-6 w-6 text-slate-400" />
+                    </div>
+                    <p className="text-sm font-medium text-slate-500">Enter a transaction ID above</p>
+                    <p className="text-xs text-slate-400 mt-1">You can find the ID in the transactions table below</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </Reveal>
+        </div>
+
+        {/* ── Transactions Table ── */}
+        <Reveal delay={0.12}>
+          <div className="bg-white rounded-2xl border border-[var(--border)] shadow-[0_2px_8px_rgba(30,58,95,0.08),0_8px_24px_rgba(30,58,95,0.06)] overflow-hidden">
+            {/* Table header */}
+            <div className="px-6 py-4 border-b border-[var(--border)] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-[var(--primary)]/10 flex items-center justify-center">
+                  <FileText className="h-4 w-4 text-[var(--primary)]" />
+                </div>
+                <div>
+                  <h2 className="text-base font-semibold text-[var(--foreground)]">Transaction History</h2>
+                  <p className="text-xs text-slate-500">{transactions.length} total records</p>
+                </div>
+              </div>
+
+              {/* Filter tabs */}
+              <div className="flex items-center gap-1 bg-[var(--muted)] rounded-xl p-1">
+                {(["all", "issued", "returned", "overdue"] as const).map((f) => (
+                  <button
+                    key={f}
+                    onClick={() => setTxFilter(f)}
+                    className={cn(
+                      "px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition-all duration-200",
+                      txFilter === f
+                        ? "bg-white text-[var(--primary)] shadow-sm border border-[var(--border)]"
+                        : "text-slate-500 hover:text-[var(--foreground)]"
+                    )}
+                  >
+                    {f} {f !== "all" && <span className="ml-1 opacity-60">({txCounts[f]})</span>}
+                  </button>
+                ))}
+              </div>
+
               <button
-                onClick={fetchData}
-                className="flex items-center gap-2 self-start rounded-lg border border-[var(--lms-border)] bg-white px-4 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-50 sm:self-auto"
+                onClick={loadTransactions}
+                className="flex items-center gap-1.5 rounded-xl border border-[var(--border)] bg-white px-3 py-2 text-xs font-medium text-slate-600 hover:bg-[var(--muted)] transition-colors"
               >
-                <RefreshCw className="h-4 w-4" />
+                <RefreshCw className="h-3.5 w-3.5" />
                 Refresh
               </button>
             </div>
-          </div>
-        </div>
-      </Reveal>
 
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        {/* Stats Row */}
-        <Reveal>
-          <motion.div
-            variants={staggerContainer}
-            initial="hidden"
-            animate="visible"
-            className="mb-8 grid grid-cols-2 gap-4 lg:grid-cols-4"
-          >
-            {[
-              { label: "Currently Issued", value: totalIssued, icon: BookOpen, color: "text-blue-600", bg: "bg-blue-50" },
-              { label: "Overdue Books", value: totalOverdue, icon: AlertTriangle, color: "text-red-600", bg: "bg-red-50" },
-              { label: "Returned Today", value: totalReturned, icon: CheckCircle, color: "text-green-600", bg: "bg-green-50" },
-              { label: "Pending Fines (PKR)", value: totalFinesPending.toLocaleString("en-PK"), icon: Hash, color: "text-[var(--lms-gold)]", bg: "bg-amber-50" },
-            ].map((stat, i) => (
-              <motion.div
-                key={stat.label}
-                variants={fadeInUp}
-                className="rounded-xl border border-[var(--lms-border)] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]"
-              >
-                <div className={cn("mb-3 flex h-10 w-10 items-center justify-center rounded-lg", stat.bg)}>
-                  <stat.icon className={cn("h-5 w-5", stat.color)} />
-                </div>
-                <p className="text-2xl font-bold text-[var(--lms-navy)]">{loading ? "—" : stat.value}</p>
-                <p className="mt-0.5 text-xs text-gray-500">{stat.label}</p>
-              </motion.div>
-            ))}
-          </motion.div>
-        </Reveal>
-
-        {/* Tabs */}
-        <Reveal>
-          <div className="mb-6 flex gap-1 rounded-xl border border-[var(--lms-border)] bg-white p-1 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => { setActiveTab(tab.id); setStatusFilter("all"); setSearchQuery(""); }}
-                className={cn(
-                  "flex flex-1 items-center justify-center gap-2 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200",
-                  activeTab === tab.id
-                    ? "bg-[var(--lms-navy)] text-white shadow-sm"
-                    : "text-gray-500 hover:bg-gray-50 hover:text-[var(--lms-navy)]"
-                )}
-              >
-                {tab.label}
-                {tab.count !== undefined && (
-                  <span className={cn(
-                    "rounded-full px-2 py-0.5 text-xs font-semibold",
-                    activeTab === tab.id ? "bg-white/20 text-white" : "bg-gray-100 text-gray-600"
-                  )}>
-                    {tab.count}
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
-        </Reveal>
-
-        {/* Issue Form Tab */}
-        {activeTab === "issue" && (
-          <Reveal>
-            <div className="rounded-2xl border border-[var(--lms-border)] bg-white p-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-              <div className="mb-6 flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--lms-navy)]/8">
-                  <Plus className="h-5 w-5 text-[var(--lms-navy)]" />
-                </div>
-                <div>
-                  <h2 className="font-bold text-[var(--lms-navy)]">Issue a New Book</h2>
-                  <p className="text-sm text-gray-500">Assign a book to a library member for {DEFAULT_ISSUE_DAYS} days.</p>
-                </div>
+            {/* Table */}
+            {txLoading ? (
+              <div className="flex items-center justify-center py-16">
+                <RefreshCw className="h-6 w-6 animate-spin text-[var(--accent)]" />
+                <span className="ml-2 text-sm text-slate-500">Loading transactions...</span>
               </div>
-              {loading ? (
-                <div className="flex items-center justify-center py-12">
-                  <RefreshCw className="h-6 w-6 animate-spin text-[var(--lms-gold)]" />
+            ) : filteredTx.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="w-14 h-14 rounded-2xl bg-[var(--muted)] flex items-center justify-center mb-3">
+                  <BookOpen className="h-6 w-6 text-slate-400" />
                 </div>
-              ) : (
-                <IssueForm
-                  books={books}
-                  members={members}
-                  currentUserId={currentUserId}
-                  onSuccess={fetchData}
-                />
-              )}
-            </div>
-          </Reveal>
-        )}
-
-        {/* Active / History Tabs */}
-        {activeTab !== "issue" && (
-          <>
-            {/* Filters */}
-            <Reveal>
-              <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search by book title, author, member name, or ISBN..."
-                    className="w-full rounded-lg border border-[var(--lms-border)] bg-white py-2.5 pl-9 pr-4 text-sm text-[var(--lms-navy)] placeholder-gray-400 focus:border-[var(--lms-gold)] focus:outline-none focus:ring-2 focus:ring-[var(--lms-gold)]/20"
-                  />
-                </div>
-                <div className="flex items-center gap-2">
-                  <Filter className="h-4 w-4 text-gray-400" />
-                  <select
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-                    className="rounded-lg border border-[var(--lms-border)] bg-white px-3 py-2.5 text-sm text-[var(--lms-navy)] focus:border-[var(--lms-gold)] focus:outline-none focus:ring-2 focus:ring-[var(--lms-gold)]/20"
-                  >
-                    <option value="all">All Statuses</option>
-                    <option value="issued">Issued</option>
-                    <option value="overdue">Overdue</option>
-                    <option value="returned">Returned</option>
-                  </select>
-                </div>
+                <p className="text-sm font-medium text-slate-500">No transactions found</p>
+                <p className="text-xs text-slate-400 mt-1">Issue a book to see it here</p>
               </div>
-            </Reveal>
-
-            {/* Transaction List */}
-            <Reveal>
-              {loading ? (
-                <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-[var(--lms-border)] bg-white py-20">
-                  <RefreshCw className="h-8 w-8 animate-spin text-[var(--lms-gold)]" />
-                  <p className="text-sm text-gray-500">Loading transactions...</p>
-                </div>
-              ) : filteredIssues.length === 0 ? (
-                <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-[var(--lms-border)] bg-white py-20">
-                  <BookOpen className="h-10 w-10 text-gray-300" />
-                  <p className="font-medium text-gray-500">No transactions found</p>
-                  <p className="text-sm text-gray-400">
-                    {searchQuery ? "Try adjusting your search or filters." : activeTab === "active" ? "No active issues at the moment." : "No return history yet."}
-                  </p>
-                </div>
-              ) : (
-                <motion.div
-                  variants={staggerContainer}
-                  initial="hidden"
-                  animate="visible"
-                  className="space-y-3"
-                >
-                  {filteredIssues.map((issue) => (
-                    <motion.div key={issue.id} variants={scaleIn}>
-                      <TransactionRow
-                        issue={issue}
-                        onReturn={setReturnTarget}
-                        expanded={expandedId === issue.id}
-                        onToggle={() => setExpandedId(expandedId === issue.id ? null : issue.id)}
-                      />
-                    </motion.div>
-                  ))}
-                </motion.div>
-              )}
-            </Reveal>
-
-            {/* Summary footer */}
-            {!loading && filteredIssues.length > 0 && (
-              <Reveal>
-                <p className="mt-4 text-center text-xs text-gray-400">
-                  Showing {filteredIssues.length} of {issues.length} total transaction{issues.length !== 1 ? "s" : ""}
-                </p>
-              </Reveal>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-[var(--border)] bg-[var(--muted)]/60">
+                      {["Book", "Member", "Issue Date", "Due Date", "Return Date", "Status", "ID"].map((h) => (
+                        <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[var(--border)]">
+                    {filteredTx.map((tx) => (
+                      <motion.tr
+                        key={tx.id}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="hover:bg-[var(--card-hover)] transition-colors duration-150 group"
+                      >
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-7 h-7 rounded-lg bg-[var(--primary)]/8 flex items-center justify-center flex-shrink-0">
+                              <BookOpen className="h-3.5 w-3.5 text-[var(--primary)]" />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="font-medium text-[var(--foreground)] truncate max-w-[160px]">
+                                {tx.book?.title ?? "Unknown"}
+                              </p>
+                              <p className="text-xs text-slate-400 truncate max-w-[160px]">
+                                {tx.book?.author}
+                              </p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="min-w-0">
+                            <p className="font-medium text-[var(--foreground)] truncate max-w-[140px]">
+                              {tx.member?.full_name ?? "Unknown"}
+                            </p>
+                            {tx.member?.membership_number && (
+                              <p className="text-xs text-slate-400 font-mono">{tx.member.membership_number}</p>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-slate-600">
+                          {formatDate(tx.issue_date)}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <span className={cn(
+                            "text-sm",
+                            calcOverdueDays(tx.due_date) > 0 && tx.status !== "returned"
+                              ? "text-red-600 font-semibold"
+                              : "text-slate-600"
+                          )}>
+                            {formatDate(tx.due_date)}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-slate-500">
+                          {tx.return_date ? formatDate(tx.return_date) : <span className="text-slate-300">—</span>}
+                        </td>
+                        <td className="px-4 py-3">
+                          <StatusBadge status={tx.status} />
+                        </td>
+                        <td className="px-4 py-3">
+                          <button
+                            onClick={() => { setReturnIssueId(tx.id); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+                            className="font-mono text-xs text-slate-400 hover:text-[var(--primary)] transition-colors group-hover:underline truncate max-w-[80px] block"
+                            title={tx.id}
+                          >
+                            {tx.id.slice(0, 8)}...
+                          </button>
+                        </td>
+                      </motion.tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
-          </>
-        )}
+          </div>
+        </Reveal>
       </div>
-
-      {/* Return Modal */}
-      <AnimatePresence>
-        {returnTarget && (
-          <ReturnModal
-            issue={returnTarget}
-            currentUserId={currentUserId}
-            onClose={() => setReturnTarget(null)}
-            onSuccess={fetchData}
-          />
-        )}
-      </AnimatePresence>
     </div>
   );
 }

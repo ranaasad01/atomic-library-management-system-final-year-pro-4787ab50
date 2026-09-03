@@ -1,202 +1,259 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { motion } from "framer-motion";
-import { Search, BookOpen, Filter, X, ChevronDown, Star, MapPin, Copy, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { motion, AnimatePresence } from "framer-motion";
+import { Search, BookOpen, Filter, X, ChevronDown, Star, MapPin, User, Hash, Calendar, Layers, CheckCircle, AlertCircle, Clock } from 'lucide-react';
 import { Reveal } from "@/components/Reveal";
-import { staggerContainer, fadeInUp } from "@/lib/motion";
+import { fadeInUp, staggerContainer, scaleIn } from "@/lib/motion";
+import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { BOOK_CATEGORIES } from "@/lib/data";
-import type from "@/lib/data";
-type Book = any;
-const Book: any = [];
 
-const AVAILABILITY_OPTIONS = ["All", "Available", "Unavailable"] as const;
-type AvailabilityFilter = (typeof AVAILABILITY_OPTIONS)[number];
+// ─── Types ──────────────────────────────────────────────────────────────────────
 
-function AvailabilityBadge({ available, total }: { available: number; total: number }) {
-  const isAvailable = available > 0;
-  return (
-    <span
-      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${
-        isAvailable
-          ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-          : "bg-red-50 text-red-700 border border-red-200"
-      }`}
-    >
-      {isAvailable ? (
-        <CheckCircle className="h-3 w-3" />
-      ) : (
-        <AlertCircle className="h-3 w-3" />
-      )}
-      {isAvailable ? `${available} of ${total} available` : "Unavailable"}
-    </span>
+interface BookRow {
+  id: string;
+  title: string;
+  author: string;
+  isbn: string | null;
+  category: string | null;
+  publisher: string | null;
+  publication_year: number | null;
+  total_copies: number;
+  available_copies: number;
+  shelf_location: string | null;
+  description: string | null;
+  created_at: string;
+}
+
+type SortOption = "title" | "author" | "year" | "availability";
+type AvailabilityFilter = "all" | "available" | "unavailable";
+
+// ─── Helpers ────────────────────────────────────────────────────────────────────
+
+function getAvailabilityInfo(available: number, total: number) {
+  if (total === 0) return { label: "Unknown", color: "bg-gray-100 text-gray-600 border-gray-200", dot: "bg-gray-400", pct: 0 };
+  const pct = available / total;
+  if (pct === 0) return { label: "Unavailable", color: "bg-red-100 text-red-700 border-red-200", dot: "bg-red-500", pct };
+  if (pct < 0.4) return { label: "Low Stock", color: "bg-amber-100 text-amber-700 border-amber-200", dot: "bg-amber-500", pct };
+  return { label: "Available", color: "bg-emerald-100 text-emerald-700 border-emerald-200", dot: "bg-emerald-500", pct };
+}
+
+function highlightText(text: string, query: string): React.ReactNode {
+  if (!query.trim()) return text;
+  const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "gi");
+  const parts = text.split(regex);
+  return parts.map((part, i) =>
+    regex.test(part) ? (
+      <mark key={i} className="bg-[var(--accent)]/30 text-[var(--foreground)] rounded px-0.5">
+        {part}
+      </mark>
+    ) : (
+      part
+    )
   );
 }
 
-function BookCard({ book }: { book: Book }) {
-  const categoryColors: Record<string, string> = {
-    Fiction: "bg-purple-50 text-purple-700 border-purple-200",
-    "Non-Fiction": "bg-blue-50 text-blue-700 border-blue-200",
-    Science: "bg-cyan-50 text-cyan-700 border-cyan-200",
-    Technology: "bg-indigo-50 text-indigo-700 border-indigo-200",
-    History: "bg-amber-50 text-amber-700 border-amber-200",
-    Mathematics: "bg-green-50 text-green-700 border-green-200",
-    Literature: "bg-rose-50 text-rose-700 border-rose-200",
-    Business: "bg-orange-50 text-orange-700 border-orange-200",
-    Philosophy: "bg-violet-50 text-violet-700 border-violet-200",
-    Religion: "bg-yellow-50 text-yellow-700 border-yellow-200",
-    Arts: "bg-pink-50 text-pink-700 border-pink-200",
-    Law: "bg-slate-50 text-slate-700 border-slate-200",
-    Medicine: "bg-teal-50 text-teal-700 border-teal-200",
-    Economics: "bg-lime-50 text-lime-700 border-lime-200",
-    Other: "bg-gray-50 text-gray-700 border-gray-200",
-  };
+// ─── Book Card ───────────────────────────────────────────────────────────────────
 
-  const catClass =
-    book.category && categoryColors[book.category]
-      ? categoryColors[book.category]
-      : "bg-gray-50 text-gray-700 border-gray-200";
+function BookCard({ book, query }: { book: BookRow; query: string }) {
+  const avail = getAvailabilityInfo(book.available_copies, book.total_copies);
 
   return (
     <motion.div
-      whileHover={{ y: -3, boxShadow: "0 8px 32px -8px rgba(30,58,95,0.18)" }}
-      transition={{ duration: 0.22, ease: "easeOut" }}
-      className="group flex flex-col rounded-2xl border border-[var(--border-color)] bg-white shadow-[0_1px_4px_rgba(30,58,95,0.06)] overflow-hidden"
+      variants={fadeInUp}
+      whileHover={{ y: -4, boxShadow: "0 12px 40px -8px rgba(30,58,95,0.18)" }}
+      transition={{ duration: 0.25, ease: "easeOut" }}
+      className="group relative bg-white rounded-2xl border border-[var(--border)] overflow-hidden shadow-[0_1px_3px_rgba(0,0,0,0.04),0_6px_20px_-6px_rgba(0,0,0,0.08)] hover:border-[var(--accent)]/40 transition-all duration-300"
     >
-      {/* Color band by category */}
-      <div className="h-1.5 w-full bg-[var(--brand-primary)]" />
+      {/* Top accent bar */}
+      <div className="h-1 w-full bg-gradient-to-r from-[var(--primary)] via-[var(--accent)] to-[var(--primary)] opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
-      <div className="flex flex-col flex-1 p-5 gap-3">
-        {/* Header */}
-        <div className="flex items-start justify-between gap-2">
+      <div className="p-5">
+        {/* Header row */}
+        <div className="flex items-start justify-between gap-3 mb-3">
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-[var(--brand-primary)] text-base leading-snug line-clamp-2 group-hover:text-[var(--brand-gold)] transition-colors duration-200">
-              {book.title}
+            <h3 className="font-semibold text-[var(--foreground)] text-base leading-snug line-clamp-2 group-hover:text-[var(--primary)] transition-colors duration-200">
+              {highlightText(book.title, query)}
             </h3>
-            <p className="mt-0.5 text-sm text-[var(--text-muted)] line-clamp-1">{book.author}</p>
+            <p className="text-sm text-[var(--muted-foreground)] mt-0.5 flex items-center gap-1">
+              <User className="w-3 h-3 flex-shrink-0" />
+              <span className="truncate">{highlightText(book.author, query)}</span>
+            </p>
           </div>
-          <BookOpen className="h-5 w-5 text-[var(--brand-gold)] shrink-0 mt-0.5" />
+
+          {/* Book icon */}
+          <div className="w-10 h-10 rounded-xl bg-[var(--primary)]/8 flex items-center justify-center flex-shrink-0 group-hover:bg-[var(--primary)]/15 transition-colors duration-200">
+            <BookOpen className="w-5 h-5 text-[var(--primary)]" />
+          </div>
         </div>
 
-        {/* Category + Availability */}
-        <div className="flex flex-wrap gap-2 items-center">
-          {book.category && (
-            <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${catClass}`}>
-              {book.category}
-            </span>
-          )}
-          <AvailabilityBadge available={book.available_copies} total={book.total_copies} />
+        {/* Availability badge */}
+        <div className="mb-4">
+          <span className={cn("inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold", avail.color)}>
+            <span className={cn("h-1.5 w-1.5 rounded-full", avail.dot)} />
+            {avail.label}
+            <span className="opacity-60">({book.available_copies}/{book.total_copies})</span>
+          </span>
         </div>
 
-        {/* Meta info */}
-        <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs text-[var(--text-muted)]">
+        {/* Meta grid */}
+        <div className="grid grid-cols-2 gap-2 text-xs text-[var(--muted-foreground)]">
           {book.isbn && (
-            <div className="flex items-center gap-1 col-span-2">
-              <Copy className="h-3 w-3 shrink-0" />
-              <span className="truncate">ISBN: {book.isbn}</span>
+            <div className="flex items-center gap-1.5 truncate">
+              <Hash className="w-3 h-3 flex-shrink-0 text-[var(--accent)]" />
+              <span className="truncate">{book.isbn}</span>
             </div>
           )}
-          {book.publisher && (
-            <div className="flex items-center gap-1 col-span-2">
-              <Star className="h-3 w-3 shrink-0" />
-              <span className="truncate">{book.publisher}{book.publication_year ? `, ${book.publication_year}` : ""}</span>
+          {book.category && (
+            <div className="flex items-center gap-1.5 truncate">
+              <Layers className="w-3 h-3 flex-shrink-0 text-[var(--accent)]" />
+              <span className="truncate">{book.category}</span>
+            </div>
+          )}
+          {book.publication_year && (
+            <div className="flex items-center gap-1.5">
+              <Calendar className="w-3 h-3 flex-shrink-0 text-[var(--accent)]" />
+              <span>{book.publication_year}</span>
             </div>
           )}
           {book.shelf_location && (
-            <div className="flex items-center gap-1 col-span-2">
-              <MapPin className="h-3 w-3 shrink-0" />
-              <span className="truncate">Shelf: {book.shelf_location}</span>
+            <div className="flex items-center gap-1.5 truncate">
+              <MapPin className="w-3 h-3 flex-shrink-0 text-[var(--accent)]" />
+              <span className="truncate">{book.shelf_location}</span>
             </div>
           )}
         </div>
 
         {/* Description */}
         {book.description && (
-          <p className="text-xs text-[var(--text-muted)] leading-relaxed line-clamp-2 border-t border-[var(--border-color)] pt-2">
+          <p className="mt-3 text-xs text-[var(--muted-foreground)] line-clamp-2 leading-relaxed border-t border-[var(--border)] pt-3">
             {book.description}
           </p>
         )}
 
-        {/* Copies bar */}
-        <div className="mt-auto pt-2">
-          <div className="flex items-center justify-between text-xs text-[var(--text-muted)] mb-1">
-            <span>Copies</span>
-            <span className="font-medium text-[var(--brand-primary)]">
-              {book.available_copies}/{book.total_copies}
-            </span>
-          </div>
-          <div className="h-1.5 w-full rounded-full bg-gray-100 overflow-hidden">
-            <div
-              className="h-full rounded-full bg-[var(--brand-primary)] transition-all duration-500"
-              style={{
-                width: book.total_copies > 0
-                  ? `${Math.round((book.available_copies / book.total_copies) * 100)}%`
-                  : "0%",
-              }}
-            />
-          </div>
+        {/* Publisher */}
+        {book.publisher && (
+          <p className="mt-2 text-[10px] text-[var(--muted-foreground)]/70 uppercase tracking-wide">
+            {book.publisher}
+          </p>
+        )}
+      </div>
+
+      {/* Availability progress bar */}
+      <div className="px-5 pb-4">
+        <div className="h-1 w-full rounded-full bg-[var(--muted)] overflow-hidden">
+          <div
+            className={cn(
+              "h-full rounded-full transition-all duration-500",
+              avail.pct === 0 ? "bg-red-400" : avail.pct < 0.4 ? "bg-amber-400" : "bg-emerald-400"
+            )}
+            style={{ width: `${avail.pct * 100}%` }}
+          />
         </div>
+        <p className="text-[10px] text-[var(--muted-foreground)]/60 mt-1 text-right">
+          {book.available_copies} of {book.total_copies} copies available
+        </p>
       </div>
     </motion.div>
   );
 }
 
+// ─── Skeleton Card ───────────────────────────────────────────────────────────────
+
+function SkeletonCard() {
+  return (
+    <div className="bg-white rounded-2xl border border-[var(--border)] p-5 animate-pulse">
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <div className="flex-1">
+          <div className="h-4 bg-[var(--muted)] rounded w-3/4 mb-2" />
+          <div className="h-3 bg-[var(--muted)] rounded w-1/2" />
+        </div>
+        <div className="w-10 h-10 rounded-xl bg-[var(--muted)]" />
+      </div>
+      <div className="h-6 bg-[var(--muted)] rounded-full w-28 mb-4" />
+      <div className="grid grid-cols-2 gap-2">
+        <div className="h-3 bg-[var(--muted)] rounded" />
+        <div className="h-3 bg-[var(--muted)] rounded" />
+        <div className="h-3 bg-[var(--muted)] rounded" />
+        <div className="h-3 bg-[var(--muted)] rounded" />
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Page ───────────────────────────────────────────────────────────────────
+
 export default function BookSearchPage() {
+  const supabase = createClient();
+
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("All");
-  const [availability, setAvailability] = useState<AvailabilityFilter>("All");
-  const [books, setBooks] = useState<Book[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string>("All");
+  const [availabilityFilter, setAvailabilityFilter] = useState<AvailabilityFilter>("all");
+  const [sortBy, setSortBy] = useState<SortOption>("title");
+  const [books, setBooks] = useState<BookRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showFilters, setShowFilters] = useState(false);
   const [totalCount, setTotalCount] = useState(0);
+  const [categoryOpen, setCategoryOpen] = useState(false);
+  const [sortOpen, setSortOpen] = useState(false);
 
   // Debounce search query
   useEffect(() => {
-    const timer = setTimeout(() => setDebouncedQuery(query), 350);
-    return () => clearTimeout(timer);
+    const t = setTimeout(() => setDebouncedQuery(query), 350);
+    return () => clearTimeout(t);
   }, [query]);
 
   const fetchBooks = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const supabase = createClient();
-      let queryBuilder = supabase.from("books").select("*", { count: "exact" });
+      let q = supabase
+        .from("books")
+        .select("*", { count: "exact" });
 
       if (debouncedQuery.trim()) {
-        queryBuilder = queryBuilder.or(
-          `title.ilike.%${debouncedQuery.trim()}%,author.ilike.%${debouncedQuery.trim()}%,isbn.ilike.%${debouncedQuery.trim()}%,publisher.ilike.%${debouncedQuery.trim()}%`
+        q = q.or(
+          `title.ilike.%${debouncedQuery}%,author.ilike.%${debouncedQuery}%,isbn.ilike.%${debouncedQuery}%`
         );
       }
 
       if (selectedCategory !== "All") {
-        queryBuilder = queryBuilder.eq("category", selectedCategory);
+        q = q.eq("category", selectedCategory);
       }
 
-      if (availability === "Available") {
-        queryBuilder = queryBuilder.gt("available_copies", 0);
-      } else if (availability === "Unavailable") {
-        queryBuilder = queryBuilder.eq("available_copies", 0);
+      if (availabilityFilter === "available") {
+        q = q.gt("available_copies", 0);
+      } else if (availabilityFilter === "unavailable") {
+        q = q.eq("available_copies", 0);
       }
 
-      queryBuilder = queryBuilder.order("title", { ascending: true });
+      switch (sortBy) {
+        case "author":
+          q = q.order("author", { ascending: true });
+          break;
+        case "year":
+          q = q.order("publication_year", { ascending: false, nullsFirst: false });
+          break;
+        case "availability":
+          q = q.order("available_copies", { ascending: false });
+          break;
+        default:
+          q = q.order("title", { ascending: true });
+      }
 
-      const { data, error: fetchError, count } = await queryBuilder;
+      const { data, error: fetchError, count } = await q.limit(60);
 
       if (fetchError) throw fetchError;
-
-      setBooks((data as Book[]) ?? []);
+      setBooks(data ?? []);
       setTotalCount(count ?? 0);
     } catch (err) {
-      console.error("Failed to fetch books:", err);
-      setError("Failed to load books. Please try again.");
+      setError(err instanceof Error ? err.message : "Failed to load books.");
     } finally {
       setLoading(false);
     }
-  }, [debouncedQuery, selectedCategory, availability]);
+  }, [debouncedQuery, selectedCategory, availabilityFilter, sortBy]);
 
   useEffect(() => {
     fetchBooks();
@@ -205,212 +262,342 @@ export default function BookSearchPage() {
   const clearFilters = () => {
     setQuery("");
     setSelectedCategory("All");
-    setAvailability("All");
+    setAvailabilityFilter("all");
+    setSortBy("title");
   };
 
   const hasActiveFilters =
-    query.trim() !== "" || selectedCategory !== "All" || availability !== "All";
+    debouncedQuery.trim() !== "" ||
+    selectedCategory !== "All" ||
+    availabilityFilter !== "all" ||
+    sortBy !== "title";
 
-  const categories = ["All", ...BOOK_CATEGORIES];
+  const availableCount = books.filter((b) => b.available_copies > 0).length;
+  const unavailableCount = books.filter((b) => b.available_copies === 0).length;
+
+  const SORT_OPTIONS: { value: SortOption; label: string }[] = [
+    { value: "title", label: "Title (A-Z)" },
+    { value: "author", label: "Author (A-Z)" },
+    { value: "year", label: "Year (Newest)" },
+    { value: "availability", label: "Availability" },
+  ];
+
+  const CATEGORIES = ["All", ...BOOK_CATEGORIES];
 
   return (
-    <div className="min-h-screen bg-[var(--page-bg)]">
-      {/* Page Header */}
-      <Reveal>
-        <div className="bg-[var(--brand-primary)] text-white">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-10 md:py-14">
-            <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <BookOpen className="h-6 w-6 text-[var(--brand-gold)]" />
-                  <span className="text-sm font-medium text-white/70 uppercase tracking-widest">
-                    NCBA&amp;E Library
-                  </span>
-                </div>
-                <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-white">
-                  Book Search
-                </h1>
-                <p className="mt-2 text-white/70 text-base max-w-xl">
-                  Search the complete library catalog. Check availability, shelf location, and copy counts in real time.
-                </p>
-              </div>
-              <div className="flex items-center gap-3 shrink-0">
-                <div className="rounded-xl bg-white/10 border border-white/20 px-4 py-2 text-center">
-                  <div className="text-2xl font-bold text-[var(--brand-gold)]">{totalCount}</div>
-                  <div className="text-xs text-white/60 mt-0.5">Books Found</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </Reveal>
+    <div className="min-h-screen bg-[var(--background)]">
+      {/* ── Hero Search Header ─────────────────────────────────────────────── */}
+      <div className="relative overflow-hidden bg-[var(--primary)]">
+        {/* Background texture */}
+        <div
+          className="absolute inset-0 opacity-10"
+          style={{
+            backgroundImage:
+              "radial-gradient(circle at 20% 50%, #c8a96e 0%, transparent 50%), radial-gradient(circle at 80% 20%, #4a90d9 0%, transparent 40%)",
+          }}
+        />
+        <div
+          className="absolute inset-0 opacity-5"
+          style={{
+            backgroundImage:
+              "repeating-linear-gradient(0deg, transparent, transparent 40px, rgba(255,255,255,0.3) 40px, rgba(255,255,255,0.3) 41px), repeating-linear-gradient(90deg, transparent, transparent 40px, rgba(255,255,255,0.3) 40px, rgba(255,255,255,0.3) 41px)",
+          }}
+        />
 
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
-        {/* Search Bar */}
-        <Reveal>
-          <div className="relative mb-4">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[var(--text-muted)]" />
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search by title, author, ISBN, or publisher..."
-              className="w-full rounded-xl border border-[var(--border-color)] bg-white pl-12 pr-12 py-3.5 text-sm text-[var(--brand-primary)] placeholder:text-[var(--text-muted)] shadow-[0_1px_4px_rgba(30,58,95,0.07)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]/30 focus:border-[var(--brand-primary)] transition-all duration-200"
-            />
-            {query && (
-              <button
-                onClick={() => setQuery("")}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--brand-primary)] transition-colors"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            )}
-          </div>
-        </Reveal>
+        <div className="relative container-lms py-16 md:py-20">
+          <motion.div
+            variants={staggerContainer}
+            initial="hidden"
+            animate="visible"
+            className="max-w-3xl mx-auto text-center"
+          >
+            {/* Badge */}
+            <motion.div variants={fadeInUp} className="mb-5">
+              <span className="inline-flex items-center gap-2 rounded-full border border-[var(--accent)]/40 bg-[var(--accent)]/10 px-4 py-1.5 text-xs font-semibold text-[var(--accent)] uppercase tracking-widest">
+                <BookOpen className="w-3.5 h-3.5" />
+                Library Catalog
+              </span>
+            </motion.div>
 
-        {/* Filter Bar */}
-        <Reveal delay={0.05}>
-          <div className="flex flex-wrap items-center gap-3 mb-6">
-            <button
-              onClick={() => setShowFilters((v) => !v)}
-              className={`inline-flex items-center gap-2 rounded-lg border px-3.5 py-2 text-sm font-medium transition-all duration-200 ${
-                showFilters
-                  ? "bg-[var(--brand-primary)] text-white border-[var(--brand-primary)]"
-                  : "bg-white text-[var(--brand-primary)] border-[var(--border-color)] hover:border-[var(--brand-primary)]"
-              }`}
+            {/* Headline */}
+            <motion.h1
+              variants={fadeInUp}
+              className="text-3xl md:text-5xl font-bold text-white tracking-tight text-balance mb-3"
             >
-              <Filter className="h-4 w-4" />
-              Filters
-              <ChevronDown
-                className={`h-3.5 w-3.5 transition-transform duration-200 ${showFilters ? "rotate-180" : ""}`}
-              />
-            </button>
+              Search Our
+              <span className="text-[var(--accent)]" style={{ fontStyle: "italic" }}> Collection</span>
+            </motion.h1>
+            <motion.p
+              variants={fadeInUp}
+              className="text-white/60 text-base md:text-lg mb-8 text-pretty"
+            >
+              Browse {totalCount > 0 ? totalCount.toLocaleString("en-US") : "thousands of"} books by title, author, or ISBN. Check real-time availability before visiting.
+            </motion.p>
 
-            {/* Quick availability pills */}
-            {AVAILABILITY_OPTIONS.map((opt) => (
+            {/* Search Input */}
+            <motion.div variants={scaleIn} className="relative">
+              <div className="relative flex items-center">
+                <Search className="absolute left-4 w-5 h-5 text-white/40 pointer-events-none" />
+                <input
+                  type="text"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search by title, author, or ISBN..."
+                  className="w-full pl-12 pr-12 py-4 rounded-2xl bg-white/10 border border-white/20 text-white placeholder-white/40 text-base focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/60 focus:border-[var(--accent)]/60 backdrop-blur-sm transition-all duration-200"
+                />
+                {query && (
+                  <button
+                    onClick={() => setQuery("")}
+                    className="absolute right-4 w-6 h-6 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30 transition-colors"
+                  >
+                    <X className="w-3.5 h-3.5 text-white" />
+                  </button>
+                )}
+              </div>
+
+              {/* Quick stats below search */}
+              <div className="flex items-center justify-center gap-6 mt-4 text-xs text-white/50">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                  {availableCount} available
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-red-400" />
+                  {unavailableCount} unavailable
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-[var(--accent)]" />
+                  {totalCount} total
+                </span>
+              </div>
+            </motion.div>
+          </motion.div>
+        </div>
+
+        {/* Wave divider */}
+        <div className="absolute bottom-0 left-0 right-0">
+          <svg viewBox="0 0 1440 40" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full">
+            <path d="M0 40L1440 40L1440 20C1200 0 960 40 720 20C480 0 240 40 0 20L0 40Z" fill="var(--background)" />
+          </svg>
+        </div>
+      </div>
+
+      {/* ── Filters Bar ───────────────────────────────────────────────────── */}
+      <div className="container-lms pt-6 pb-2">
+        <Reveal>
+          <div className="flex flex-wrap items-center gap-3">
+            {/* Category dropdown */}
+            <div className="relative">
               <button
-                key={opt}
-                onClick={() => setAvailability(opt)}
-                className={`rounded-full border px-3.5 py-1.5 text-xs font-medium transition-all duration-200 ${
-                  availability === opt
-                    ? "bg-[var(--brand-primary)] text-white border-[var(--brand-primary)]"
-                    : "bg-white text-[var(--text-muted)] border-[var(--border-color)] hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary)]"
-                }`}
+                onClick={() => { setCategoryOpen((o) => !o); setSortOpen(false); }}
+                className={cn(
+                  "flex items-center gap-2 rounded-xl border px-3.5 py-2 text-sm font-medium transition-all duration-200",
+                  selectedCategory !== "All"
+                    ? "bg-[var(--primary)] border-[var(--primary)] text-white"
+                    : "bg-white border-[var(--border)] text-[var(--foreground)] hover:border-[var(--primary)]/40"
+                )}
               >
-                {opt}
+                <Filter className="w-3.5 h-3.5" />
+                {selectedCategory === "All" ? "Category" : selectedCategory}
+                <ChevronDown className={cn("w-3.5 h-3.5 transition-transform", categoryOpen && "rotate-180")} />
               </button>
-            ))}
+              <AnimatePresence>
+                {categoryOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -8, scale: 0.97 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -8, scale: 0.97 }}
+                    transition={{ duration: 0.18 }}
+                    className="absolute top-full left-0 mt-1.5 z-30 bg-white border border-[var(--border)] rounded-xl shadow-[0_8px_32px_-8px_rgba(0,0,0,0.16)] py-1.5 min-w-[180px] max-h-64 overflow-y-auto"
+                  >
+                    {CATEGORIES.map((cat) => (
+                      <button
+                        key={cat}
+                        onClick={() => { setSelectedCategory(cat); setCategoryOpen(false); }}
+                        className={cn(
+                          "w-full text-left px-3.5 py-2 text-sm transition-colors",
+                          selectedCategory === cat
+                            ? "bg-[var(--primary)]/8 text-[var(--primary)] font-medium"
+                            : "text-[var(--foreground)] hover:bg-[var(--muted)]"
+                        )}
+                      >
+                        {cat}
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
 
+            {/* Availability filter pills */}
+            <div className="flex items-center gap-1.5 bg-white border border-[var(--border)] rounded-xl p-1">
+              {(["all", "available", "unavailable"] as AvailabilityFilter[]).map((f) => (
+                <button
+                  key={f}
+                  onClick={() => setAvailabilityFilter(f)}
+                  className={cn(
+                    "px-3 py-1.5 rounded-lg text-xs font-medium capitalize transition-all duration-200",
+                    availabilityFilter === f
+                      ? "bg-[var(--primary)] text-white shadow-sm"
+                      : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
+                  )}
+                >
+                  {f === "all" ? "All" : f === "available" ? "Available" : "Unavailable"}
+                </button>
+              ))}
+            </div>
+
+            {/* Sort dropdown */}
+            <div className="relative ml-auto">
+              <button
+                onClick={() => { setSortOpen((o) => !o); setCategoryOpen(false); }}
+                className="flex items-center gap-2 rounded-xl border border-[var(--border)] bg-white px-3.5 py-2 text-sm font-medium text-[var(--foreground)] hover:border-[var(--primary)]/40 transition-all duration-200"
+              >
+                Sort: {SORT_OPTIONS.find((s) => s.value === sortBy)?.label}
+                <ChevronDown className={cn("w-3.5 h-3.5 transition-transform", sortOpen && "rotate-180")} />
+              </button>
+              <AnimatePresence>
+                {sortOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -8, scale: 0.97 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -8, scale: 0.97 }}
+                    transition={{ duration: 0.18 }}
+                    className="absolute top-full right-0 mt-1.5 z-30 bg-white border border-[var(--border)] rounded-xl shadow-[0_8px_32px_-8px_rgba(0,0,0,0.16)] py-1.5 min-w-[160px]"
+                  >
+                    {SORT_OPTIONS.map((opt) => (
+                      <button
+                        key={opt.value}
+                        onClick={() => { setSortBy(opt.value); setSortOpen(false); }}
+                        className={cn(
+                          "w-full text-left px-3.5 py-2 text-sm transition-colors",
+                          sortBy === opt.value
+                            ? "bg-[var(--primary)]/8 text-[var(--primary)] font-medium"
+                            : "text-[var(--foreground)] hover:bg-[var(--muted)]"
+                        )}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* Clear filters */}
             {hasActiveFilters && (
               <button
                 onClick={clearFilters}
-                className="inline-flex items-center gap-1.5 rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-100 transition-colors"
+                className="flex items-center gap-1.5 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-100 transition-colors"
               >
-                <X className="h-3 w-3" />
-                Clear all
+                <X className="w-3.5 h-3.5" />
+                Clear
               </button>
             )}
           </div>
-
-          {/* Expanded filters */}
-          {showFilters && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.25, ease: "easeOut" }}
-              className="mb-6 rounded-xl border border-[var(--border-color)] bg-white p-5 shadow-[0_1px_4px_rgba(30,58,95,0.06)]"
-            >
-              <p className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider mb-3">
-                Filter by Category
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {categories.map((cat) => (
-                  <button
-                    key={cat}
-                    onClick={() => setSelectedCategory(cat)}
-                    className={`rounded-full border px-3 py-1 text-xs font-medium transition-all duration-200 ${
-                      selectedCategory === cat
-                        ? "bg-[var(--brand-primary)] text-white border-[var(--brand-primary)]"
-                        : "bg-[var(--page-bg)] text-[var(--text-muted)] border-[var(--border-color)] hover:border-[var(--brand-primary)] hover:text-[var(--brand-primary)]"
-                    }`}
-                  >
-                    {cat}
-                  </button>
-                ))}
-              </div>
-            </motion.div>
-          )}
         </Reveal>
 
-        {/* Results */}
-        {loading ? (
+        {/* Results count */}
+        <Reveal delay={0.05}>
+          <div className="flex items-center justify-between mt-4 mb-1">
+            <p className="text-sm text-[var(--muted-foreground)]">
+              {loading ? (
+                <span className="inline-flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-full border-2 border-[var(--primary)] border-t-transparent animate-spin" />
+                  Searching...
+                </span>
+              ) : (
+                <>
+                  <span className="font-semibold text-[var(--foreground)]">{books.length}</span>
+                  {" "}result{books.length !== 1 ? "s" : ""}
+                  {debouncedQuery && (
+                    <> for <span className="font-medium text-[var(--primary)]">&ldquo;{debouncedQuery}&rdquo;</span></>
+                  )}
+                </>
+              )}
+            </p>
+          </div>
+        </Reveal>
+      </div>
+
+      {/* ── Results Grid ──────────────────────────────────────────────────── */}
+      <div className="container-lms pb-16 pt-4">
+        {/* Error state */}
+        {error && (
           <Reveal>
-            <div className="flex flex-col items-center justify-center py-24 gap-4">
-              <Loader2 className="h-10 w-10 animate-spin text-[var(--brand-primary)]" />
-              <p className="text-sm text-[var(--text-muted)]">Searching catalog...</p>
-            </div>
-          </Reveal>
-        ) : error ? (
-          <Reveal>
-            <div className="flex flex-col items-center justify-center py-24 gap-4">
-              <AlertCircle className="h-10 w-10 text-red-400" />
-              <p className="text-sm text-red-600">{error}</p>
+            <div className="flex items-center gap-3 rounded-2xl border border-red-200 bg-red-50 px-5 py-4 mb-6">
+              <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-red-700">Failed to load books</p>
+                <p className="text-xs text-red-500 mt-0.5">{error}</p>
+              </div>
               <button
                 onClick={fetchBooks}
-                className="rounded-lg bg-[var(--brand-primary)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--brand-primary)]/90 transition-colors"
+                className="ml-auto text-xs font-medium text-red-600 hover:text-red-800 underline"
               >
                 Retry
               </button>
             </div>
           </Reveal>
-        ) : books.length === 0 ? (
+        )}
+
+        {/* Loading skeletons */}
+        {loading && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <SkeletonCard key={i} />
+            ))}
+          </div>
+        )}
+
+        {/* Empty state */}
+        {!loading && !error && books.length === 0 && (
           <Reveal>
-            <div className="flex flex-col items-center justify-center py-24 gap-4">
-              <BookOpen className="h-12 w-12 text-[var(--text-muted)]/40" />
-              <div className="text-center">
-                <p className="font-semibold text-[var(--brand-primary)]">No books found</p>
-                <p className="text-sm text-[var(--text-muted)] mt-1">
-                  Try adjusting your search or filters.
-                </p>
+            <div className="flex flex-col items-center justify-center py-24 text-center">
+              <div className="w-20 h-20 rounded-2xl bg-[var(--primary)]/8 flex items-center justify-center mb-5">
+                <BookOpen className="w-10 h-10 text-[var(--primary)]/40" />
               </div>
-              {hasActiveFilters && (
-                <button
-                  onClick={clearFilters}
-                  className="rounded-lg border border-[var(--border-color)] bg-white px-4 py-2 text-sm font-medium text-[var(--brand-primary)] hover:bg-[var(--page-bg)] transition-colors"
-                >
-                  Clear filters
-                </button>
-              )}
+              <h3 className="text-lg font-semibold text-[var(--foreground)] mb-2">
+                No books found
+              </h3>
+              <p className="text-sm text-[var(--muted-foreground)] max-w-sm mb-5">
+                {debouncedQuery
+                  ? `No results for "${debouncedQuery}". Try a different search term or adjust your filters.`
+                  : "No books match the selected filters. Try adjusting your criteria."}
+              </p>
+              <button
+                onClick={clearFilters}
+                className="rounded-xl bg-[var(--primary)] px-5 py-2.5 text-sm font-medium text-white hover:bg-[var(--primary-hover)] transition-colors"
+              >
+                Clear all filters
+              </button>
             </div>
           </Reveal>
-        ) : (
-          <>
-            <Reveal>
-              <p className="text-sm text-[var(--text-muted)] mb-5">
-                Showing{" "}
-                <span className="font-semibold text-[var(--brand-primary)]">{books.length}</span>
-                {totalCount !== books.length && (
-                  <> of <span className="font-semibold text-[var(--brand-primary)]">{totalCount}</span></>
-                )}{" "}
-                {totalCount === 1 ? "book" : "books"}
-                {hasActiveFilters && " matching your search"}
-              </p>
-            </Reveal>
+        )}
 
-            <motion.div
-              variants={staggerContainer}
-              initial="hidden"
-              animate="visible"
-              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"
-            >
-              {books.map((book, i) => (
-                <motion.div key={book.id} variants={fadeInUp}>
-                  <BookCard book={book} />
-                </motion.div>
-              ))}
-            </motion.div>
-          </>
+        {/* Book grid */}
+        {!loading && !error && books.length > 0 && (
+          <motion.div
+            variants={staggerContainer}
+            initial="hidden"
+            animate="visible"
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"
+          >
+            {books.map((book) => (
+              <BookCard key={book.id} book={book} query={debouncedQuery} />
+            ))}
+          </motion.div>
+        )}
+
+        {/* Limit notice */}
+        {!loading && books.length === 60 && (
+          <Reveal>
+            <div className="mt-8 text-center">
+              <p className="text-sm text-[var(--muted-foreground)]">
+                Showing first 60 results. Refine your search to find specific books.
+              </p>
+            </div>
+          </Reveal>
         )}
       </div>
     </div>

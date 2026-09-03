@@ -4,8 +4,8 @@ import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from "@/lib/supabase/client";
 import { Reveal } from "@/components/Reveal";
-import { fadeInUp, staggerContainer, scaleIn } from "@/lib/motion";
-import { Search, Plus, Edit, Trash2, X, Check, BookOpen, AlertCircle, ChevronDown, Filter, Save, Eye } from 'lucide-react';
+import { fadeInUp, staggerContainer, scaleIn, modalVariants, overlayVariants } from "@/lib/motion";
+import { Search, Plus, Edit, Trash2, X, BookOpen, AlertCircle, Filter, Save, RefreshCw, Library, Hash, User, Tag, Building2, Calendar, Layers, MapPin, FileText, ChevronRight } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import type { Database } from "@/types/supabase";
 
@@ -47,6 +47,8 @@ const EMPTY_FORM = {
 
 type FormState = typeof EMPTY_FORM;
 
+// ─── Status Badge ────────────────────────────────────────────────────────────
+
 function StatusBadge({ available, total }: { available: number; total: number }) {
   const pct = total > 0 ? available / total : 0;
   const color =
@@ -57,13 +59,44 @@ function StatusBadge({ available, total }: { available: number; total: number })
       : "bg-emerald-100 text-emerald-700 border-emerald-200";
   const label =
     pct === 0 ? "Unavailable" : pct < 0.4 ? "Low Stock" : "Available";
+  const dotColor = pct === 0 ? "bg-red-500" : pct < 0.4 ? "bg-amber-500" : "bg-emerald-500";
   return (
-    <span className={cn("inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium", color)}>
-      <span className={cn("h-1.5 w-1.5 rounded-full", pct === 0 ? "bg-red-500" : pct < 0.4 ? "bg-amber-500" : "bg-emerald-500")} />
+    <span className={cn("inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-semibold", color)}>
+      <span className={cn("h-1.5 w-1.5 rounded-full", dotColor)} />
       {label}
     </span>
   );
 }
+
+// ─── Input Field ─────────────────────────────────────────────────────────────
+
+function FormField({
+  label,
+  icon: Icon,
+  required,
+  children,
+}: {
+  label: string;
+  icon?: React.ElementType;
+  required?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label className="text-xs font-semibold text-[#1e3a5f] uppercase tracking-wide flex items-center gap-1.5">
+        {Icon && <Icon className="w-3.5 h-3.5 text-[#c8a96e]" />}
+        {label}
+        {required && <span className="text-red-500">*</span>}
+      </label>
+      {children}
+    </div>
+  );
+}
+
+const inputCls =
+  "w-full rounded-xl border border-[#d6cfc2] bg-[#f5f0e8]/60 px-3.5 py-2.5 text-sm text-[#1a2a3a] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#c8a96e]/50 focus:border-[#c8a96e] transition-all duration-200";
+
+// ─── Book Form Modal ─────────────────────────────────────────────────────────
 
 function BookFormModal({
   open,
@@ -129,230 +162,212 @@ function BookFormModal({
     <AnimatePresence>
       {open && (
         <>
+          {/* Backdrop */}
           <motion.div
-            className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
+            variants={overlayVariants}
+            initial="hidden"
+            animate="visible"
+            exit="hidden"
             onClick={onClose}
           />
+
+          {/* Modal */}
           <motion.div
             className="fixed inset-0 z-50 flex items-center justify-center p-4"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            variants={overlayVariants}
+            initial="hidden"
+            animate="visible"
+            exit="hidden"
           >
             <motion.div
-              className="relative w-full max-w-2xl rounded-2xl border border-[var(--brand-border)] bg-white shadow-[0_8px_40px_-8px_rgba(30,58,95,0.18)] overflow-hidden"
-              initial={{ scale: 0.95, y: 16 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.95, y: 16 }}
-              transition={{ duration: 0.25, ease: "easeOut" }}
+              className="relative w-full max-w-2xl max-h-[90vh] overflow-hidden rounded-2xl bg-white shadow-[0_8px_40px_-8px_rgba(30,58,95,0.35)] flex flex-col"
+              variants={modalVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
               onClick={(e) => e.stopPropagation()}
             >
-              {/* Modal header */}
-              <div className="flex items-center justify-between border-b border-[var(--brand-border)] bg-[var(--brand-navy)] px-6 py-4">
+              {/* Modal Header */}
+              <div
+                className="flex items-center justify-between px-6 py-5 flex-shrink-0"
+                style={{ background: "linear-gradient(135deg, #1e3a5f 0%, #2a4f7c 100%)" }}
+              >
                 <div className="flex items-center gap-3">
-                  <BookOpen className="h-5 w-5 text-[var(--brand-gold)]" />
-                  <h2 className="text-lg font-semibold text-white">
-                    {mode === "add" ? "Add New Book" : "Edit Book"}
-                  </h2>
+                  <div className="w-9 h-9 rounded-xl bg-white/15 flex items-center justify-center">
+                    <BookOpen className="w-5 h-5 text-[#c8a96e]" />
+                  </div>
+                  <div>
+                    <h2 className="text-white font-bold text-lg leading-tight">
+                      {mode === "add" ? "Add New Book" : "Edit Book"}
+                    </h2>
+                    <p className="text-white/60 text-xs mt-0.5">
+                      {mode === "add" ? "Fill in the details to add a book to the catalog" : "Update the book information below"}
+                    </p>
+                  </div>
                 </div>
                 <button
                   onClick={onClose}
-                  className="rounded-lg p-1.5 text-white/60 transition-colors hover:bg-white/10 hover:text-white"
+                  className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors duration-200"
+                  aria-label="Close modal"
                 >
-                  <X className="h-5 w-5" />
+                  <X className="w-4 h-4 text-white" />
                 </button>
               </div>
 
-              {/* Form */}
-              <form onSubmit={handleSubmit} className="max-h-[75vh] overflow-y-auto p-6">
+              {/* Modal Body */}
+              <div className="overflow-y-auto flex-1 px-6 py-5">
                 {error && (
-                  <div className="mb-4 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                    <AlertCircle className="h-4 w-4 shrink-0" />
+                  <div className="mb-4 flex items-center gap-2.5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                    <AlertCircle className="h-4 w-4 flex-shrink-0" />
                     {error}
                   </div>
                 )}
 
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  {/* Title */}
-                  <div className="sm:col-span-2">
-                    <label className="mb-1.5 block text-sm font-medium text-[var(--brand-navy)]">
-                      Title <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={form.title}
-                      onChange={(e) => set("title", e.target.value)}
-                      placeholder="e.g. Introduction to Algorithms"
-                      className="w-full rounded-xl border border-[var(--brand-border)] bg-[var(--brand-cream)] px-4 py-2.5 text-sm text-[var(--brand-navy)] placeholder-gray-400 outline-none transition focus:border-[var(--brand-gold)] focus:ring-2 focus:ring-[var(--brand-gold)]/20"
-                    />
+                <form id="book-form" onSubmit={handleSubmit} className="space-y-4">
+                  {/* Row 1: Title + Author */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <FormField label="Title" icon={BookOpen} required>
+                      <input
+                        className={inputCls}
+                        placeholder="e.g. Introduction to Algorithms"
+                        value={form.title}
+                        onChange={(e) => set("title", e.target.value)}
+                        required
+                      />
+                    </FormField>
+                    <FormField label="Author" icon={User} required>
+                      <input
+                        className={inputCls}
+                        placeholder="e.g. Thomas H. Cormen"
+                        value={form.author}
+                        onChange={(e) => set("author", e.target.value)}
+                        required
+                      />
+                    </FormField>
                   </div>
 
-                  {/* Author */}
-                  <div>
-                    <label className="mb-1.5 block text-sm font-medium text-[var(--brand-navy)]">
-                      Author <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={form.author}
-                      onChange={(e) => set("author", e.target.value)}
-                      placeholder="e.g. Thomas H. Cormen"
-                      className="w-full rounded-xl border border-[var(--brand-border)] bg-[var(--brand-cream)] px-4 py-2.5 text-sm text-[var(--brand-navy)] placeholder-gray-400 outline-none transition focus:border-[var(--brand-gold)] focus:ring-2 focus:ring-[var(--brand-gold)]/20"
-                    />
-                  </div>
-
-                  {/* ISBN */}
-                  <div>
-                    <label className="mb-1.5 block text-sm font-medium text-[var(--brand-navy)]">
-                      ISBN
-                    </label>
-                    <input
-                      type="text"
-                      value={form.isbn}
-                      onChange={(e) => set("isbn", e.target.value)}
-                      placeholder="e.g. 978-0-262-03384-8"
-                      className="w-full rounded-xl border border-[var(--brand-border)] bg-[var(--brand-cream)] px-4 py-2.5 text-sm text-[var(--brand-navy)] placeholder-gray-400 outline-none transition focus:border-[var(--brand-gold)] focus:ring-2 focus:ring-[var(--brand-gold)]/20"
-                    />
-                  </div>
-
-                  {/* Category */}
-                  <div>
-                    <label className="mb-1.5 block text-sm font-medium text-[var(--brand-navy)]">
-                      Category
-                    </label>
-                    <div className="relative">
+                  {/* Row 2: ISBN + Category */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <FormField label="ISBN" icon={Hash}>
+                      <input
+                        className={inputCls}
+                        placeholder="e.g. 978-0-262-03384-8"
+                        value={form.isbn}
+                        onChange={(e) => set("isbn", e.target.value)}
+                      />
+                    </FormField>
+                    <FormField label="Category" icon={Tag}>
                       <select
+                        className={inputCls}
                         value={form.category}
                         onChange={(e) => set("category", e.target.value)}
-                        className="w-full appearance-none rounded-xl border border-[var(--brand-border)] bg-[var(--brand-cream)] px-4 py-2.5 text-sm text-[var(--brand-navy)] outline-none transition focus:border-[var(--brand-gold)] focus:ring-2 focus:ring-[var(--brand-gold)]/20"
                       >
                         <option value="">Select category</option>
-                        {BOOK_CATEGORIES.filter((c) => c !== "All").map((c) => (
-                          <option key={c} value={c}>{c}</option>
+                        {BOOK_CATEGORIES.filter((c) => c !== "All").map((cat) => (
+                          <option key={cat} value={cat}>{cat}</option>
                         ))}
                       </select>
-                      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                    </div>
+                    </FormField>
                   </div>
 
-                  {/* Publisher */}
-                  <div>
-                    <label className="mb-1.5 block text-sm font-medium text-[var(--brand-navy)]">
-                      Publisher
-                    </label>
-                    <input
-                      type="text"
-                      value={form.publisher}
-                      onChange={(e) => set("publisher", e.target.value)}
-                      placeholder="e.g. MIT Press"
-                      className="w-full rounded-xl border border-[var(--brand-border)] bg-[var(--brand-cream)] px-4 py-2.5 text-sm text-[var(--brand-navy)] placeholder-gray-400 outline-none transition focus:border-[var(--brand-gold)] focus:ring-2 focus:ring-[var(--brand-gold)]/20"
-                    />
+                  {/* Row 3: Publisher + Year */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <FormField label="Publisher" icon={Building2}>
+                      <input
+                        className={inputCls}
+                        placeholder="e.g. MIT Press"
+                        value={form.publisher}
+                        onChange={(e) => set("publisher", e.target.value)}
+                      />
+                    </FormField>
+                    <FormField label="Publication Year" icon={Calendar}>
+                      <input
+                        className={inputCls}
+                        type="number"
+                        placeholder="e.g. 2022"
+                        min={1800}
+                        max={new Date().getFullYear() + 1}
+                        value={form.publication_year}
+                        onChange={(e) => set("publication_year", e.target.value)}
+                      />
+                    </FormField>
                   </div>
 
-                  {/* Publication Year */}
-                  <div>
-                    <label className="mb-1.5 block text-sm font-medium text-[var(--brand-navy)]">
-                      Publication Year
-                    </label>
-                    <input
-                      type="number"
-                      value={form.publication_year}
-                      onChange={(e) => set("publication_year", e.target.value)}
-                      placeholder="e.g. 2022"
-                      min="1800"
-                      max="2099"
-                      className="w-full rounded-xl border border-[var(--brand-border)] bg-[var(--brand-cream)] px-4 py-2.5 text-sm text-[var(--brand-navy)] placeholder-gray-400 outline-none transition focus:border-[var(--brand-gold)] focus:ring-2 focus:ring-[var(--brand-gold)]/20"
-                    />
+                  {/* Row 4: Total Copies + Available Copies */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <FormField label="Total Copies" icon={Layers}>
+                      <input
+                        className={inputCls}
+                        type="number"
+                        min={1}
+                        value={form.total_copies}
+                        onChange={(e) => set("total_copies", e.target.value)}
+                      />
+                    </FormField>
+                    <FormField label="Available Copies" icon={Layers}>
+                      <input
+                        className={inputCls}
+                        type="number"
+                        min={0}
+                        value={form.available_copies}
+                        onChange={(e) => set("available_copies", e.target.value)}
+                      />
+                    </FormField>
                   </div>
 
-                  {/* Total Copies */}
-                  <div>
-                    <label className="mb-1.5 block text-sm font-medium text-[var(--brand-navy)]">
-                      Total Copies
-                    </label>
+                  {/* Row 5: Shelf Location */}
+                  <FormField label="Shelf Location" icon={MapPin}>
                     <input
-                      type="number"
-                      value={form.total_copies}
-                      onChange={(e) => set("total_copies", e.target.value)}
-                      min="1"
-                      className="w-full rounded-xl border border-[var(--brand-border)] bg-[var(--brand-cream)] px-4 py-2.5 text-sm text-[var(--brand-navy)] placeholder-gray-400 outline-none transition focus:border-[var(--brand-gold)] focus:ring-2 focus:ring-[var(--brand-gold)]/20"
-                    />
-                  </div>
-
-                  {/* Available Copies */}
-                  <div>
-                    <label className="mb-1.5 block text-sm font-medium text-[var(--brand-navy)]">
-                      Available Copies
-                    </label>
-                    <input
-                      type="number"
-                      value={form.available_copies}
-                      onChange={(e) => set("available_copies", e.target.value)}
-                      min="0"
-                      className="w-full rounded-xl border border-[var(--brand-border)] bg-[var(--brand-cream)] px-4 py-2.5 text-sm text-[var(--brand-navy)] placeholder-gray-400 outline-none transition focus:border-[var(--brand-gold)] focus:ring-2 focus:ring-[var(--brand-gold)]/20"
-                    />
-                  </div>
-
-                  {/* Shelf Location */}
-                  <div>
-                    <label className="mb-1.5 block text-sm font-medium text-[var(--brand-navy)]">
-                      Shelf Location
-                    </label>
-                    <input
-                      type="text"
+                      className={inputCls}
+                      placeholder="e.g. CS-A3"
                       value={form.shelf_location}
                       onChange={(e) => set("shelf_location", e.target.value)}
-                      placeholder="e.g. A-12"
-                      className="w-full rounded-xl border border-[var(--brand-border)] bg-[var(--brand-cream)] px-4 py-2.5 text-sm text-[var(--brand-navy)] placeholder-gray-400 outline-none transition focus:border-[var(--brand-gold)] focus:ring-2 focus:ring-[var(--brand-gold)]/20"
                     />
-                  </div>
+                  </FormField>
 
-                  {/* Description */}
-                  <div className="sm:col-span-2">
-                    <label className="mb-1.5 block text-sm font-medium text-[var(--brand-navy)]">
-                      Description
-                    </label>
+                  {/* Row 6: Description */}
+                  <FormField label="Description" icon={FileText}>
                     <textarea
-                      value={form.description}
-                      onChange={(e) => set("description", e.target.value)}
+                      className={cn(inputCls, "resize-none")}
                       rows={3}
                       placeholder="Brief description of the book..."
-                      className="w-full resize-none rounded-xl border border-[var(--brand-border)] bg-[var(--brand-cream)] px-4 py-2.5 text-sm text-[var(--brand-navy)] placeholder-gray-400 outline-none transition focus:border-[var(--brand-gold)] focus:ring-2 focus:ring-[var(--brand-gold)]/20"
+                      value={form.description}
+                      onChange={(e) => set("description", e.target.value)}
                     />
-                  </div>
-                </div>
+                  </FormField>
+                </form>
+              </div>
 
-                {/* Actions */}
-                <div className="mt-6 flex items-center justify-end gap-3">
-                  <button
-                    type="button"
-                    onClick={onClose}
-                    className="rounded-xl border border-[var(--brand-border)] bg-white px-5 py-2.5 text-sm font-medium text-[var(--brand-navy)] transition hover:bg-[var(--brand-cream)]"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={saving}
-                    className="flex items-center gap-2 rounded-xl bg-[var(--brand-navy)] px-5 py-2.5 text-sm font-medium text-white transition hover:bg-[var(--brand-navy)]/90 disabled:opacity-60"
-                  >
-                    {saving ? (
-                      <>
-                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                        Saving...
-                      </>
-                    ) : (
-                      <>
-                        <Save className="h-4 w-4" />
-                        {mode === "add" ? "Add Book" : "Save Changes"}
-                      </>
-                    )}
-                  </button>
-                </div>
-              </form>
+              {/* Modal Footer */}
+              <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-[#d6cfc2] bg-[#f5f0e8]/50 flex-shrink-0">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-4 py-2.5 rounded-xl border border-[#d6cfc2] bg-white text-sm font-medium text-[#1a2a3a] hover:bg-[#f5f0e8] transition-all duration-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  form="book-form"
+                  disabled={saving}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed shadow-[0_2px_8px_rgba(200,169,110,0.35)] hover:shadow-[0_4px_16px_rgba(200,169,110,0.45)] hover:scale-[1.02]"
+                  style={{ background: "linear-gradient(135deg, #c8a96e 0%, #b8944f 100%)" }}
+                >
+                  {saving ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4" />
+                      {mode === "add" ? "Add Book" : "Save Changes"}
+                    </>
+                  )}
+                </button>
+              </div>
             </motion.div>
           </motion.div>
         </>
@@ -360,87 +375,79 @@ function BookFormModal({
     </AnimatePresence>
   );
 }
+
+// ─── Delete Confirm Modal ─────────────────────────────────────────────────────
 
 function DeleteConfirmModal({
   open,
   book,
   onClose,
   onConfirm,
+  deleting,
 }: {
   open: boolean;
   book: BookRow | null;
   onClose: () => void;
-  onConfirm: () => Promise<void>;
+  onConfirm: () => void;
+  deleting: boolean;
 }) {
-  const [deleting, setDeleting] = useState(false);
-
-  const handleConfirm = async () => {
-    setDeleting(true);
-    try {
-      await onConfirm();
-      onClose();
-    } finally {
-      setDeleting(false);
-    }
-  };
-
   return (
     <AnimatePresence>
       {open && book && (
         <>
           <motion.div
-            className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
+            variants={overlayVariants}
+            initial="hidden"
+            animate="visible"
+            exit="hidden"
             onClick={onClose}
           />
           <motion.div
             className="fixed inset-0 z-50 flex items-center justify-center p-4"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            variants={overlayVariants}
+            initial="hidden"
+            animate="visible"
+            exit="hidden"
           >
             <motion.div
-              className="w-full max-w-md rounded-2xl border border-[var(--brand-border)] bg-white p-6 shadow-[0_8px_40px_-8px_rgba(30,58,95,0.18)]"
-              initial={{ scale: 0.95, y: 16 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.95, y: 16 }}
-              transition={{ duration: 0.22, ease: "easeOut" }}
+              className="relative w-full max-w-md rounded-2xl bg-white shadow-[0_8px_40px_-8px_rgba(30,58,95,0.35)] overflow-hidden"
+              variants={modalVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
               onClick={(e) => e.stopPropagation()}
             >
-              <div className="flex items-start gap-4">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-red-100">
-                  <Trash2 className="h-5 w-5 text-red-600" />
+              <div className="p-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center flex-shrink-0">
+                    <Trash2 className="w-5 h-5 text-red-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-[#1e3a5f] text-lg">Delete Book</h3>
+                    <p className="text-sm text-slate-500">This action cannot be undone.</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-base font-semibold text-[var(--brand-navy)]">Delete Book</h3>
-                  <p className="mt-1 text-sm text-gray-500">
-                    Are you sure you want to delete{" "}
-                    <span className="font-medium text-[var(--brand-navy)]">&ldquo;{book.title}&rdquo;</span>?
-                    This action cannot be undone.
-                  </p>
+                <p className="text-sm text-[#1a2a3a] mb-6">
+                  Are you sure you want to delete{" "}
+                  <span className="font-semibold">&ldquo;{book.title}&rdquo;</span>? All associated records may be affected.
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={onClose}
+                    className="flex-1 px-4 py-2.5 rounded-xl border border-[#d6cfc2] bg-white text-sm font-medium text-[#1a2a3a] hover:bg-[#f5f0e8] transition-all duration-200"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={onConfirm}
+                    disabled={deleting}
+                    className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition-all duration-200 disabled:opacity-60"
+                  >
+                    {deleting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                    {deleting ? "Deleting..." : "Delete Book"}
+                  </button>
                 </div>
-              </div>
-              <div className="mt-5 flex justify-end gap-3">
-                <button
-                  onClick={onClose}
-                  className="rounded-xl border border-[var(--brand-border)] bg-white px-4 py-2 text-sm font-medium text-[var(--brand-navy)] transition hover:bg-[var(--brand-cream)]"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleConfirm}
-                  disabled={deleting}
-                  className="flex items-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-700 disabled:opacity-60"
-                >
-                  {deleting ? (
-                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                  ) : (
-                    <Trash2 className="h-4 w-4" />
-                  )}
-                  Delete
-                </button>
               </div>
             </motion.div>
           </motion.div>
@@ -450,100 +457,7 @@ function DeleteConfirmModal({
   );
 }
 
-function ViewBookModal({ open, book, onClose }: { open: boolean; book: BookRow | null; onClose: () => void }) {
-  return (
-    <AnimatePresence>
-      {open && book && (
-        <>
-          <motion.div
-            className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-          />
-          <motion.div
-            className="fixed inset-0 z-50 flex items-center justify-center p-4"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
-            <motion.div
-              className="w-full max-w-lg rounded-2xl border border-[var(--brand-border)] bg-white shadow-[0_8px_40px_-8px_rgba(30,58,95,0.18)] overflow-hidden"
-              initial={{ scale: 0.95, y: 16 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.95, y: 16 }}
-              transition={{ duration: 0.22, ease: "easeOut" }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex items-center justify-between border-b border-[var(--brand-border)] bg-[var(--brand-navy)] px-6 py-4">
-                <div className="flex items-center gap-3">
-                  <BookOpen className="h-5 w-5 text-[var(--brand-gold)]" />
-                  <h2 className="text-lg font-semibold text-white">Book Details</h2>
-                </div>
-                <button
-                  onClick={onClose}
-                  className="rounded-lg p-1.5 text-white/60 transition-colors hover:bg-white/10 hover:text-white"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-              <div className="p-6 space-y-4">
-                <div>
-                  <p className="text-xs font-medium uppercase tracking-wider text-gray-400">Title</p>
-                  <p className="mt-0.5 text-base font-semibold text-[var(--brand-navy)]">{book.title}</p>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-xs font-medium uppercase tracking-wider text-gray-400">Author</p>
-                    <p className="mt-0.5 text-sm text-[var(--brand-navy)]">{book.author}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium uppercase tracking-wider text-gray-400">ISBN</p>
-                    <p className="mt-0.5 text-sm text-[var(--brand-navy)]">{book.isbn ?? "N/A"}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium uppercase tracking-wider text-gray-400">Category</p>
-                    <p className="mt-0.5 text-sm text-[var(--brand-navy)]">{book.category ?? "N/A"}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium uppercase tracking-wider text-gray-400">Publisher</p>
-                    <p className="mt-0.5 text-sm text-[var(--brand-navy)]">{book.publisher ?? "N/A"}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium uppercase tracking-wider text-gray-400">Year</p>
-                    <p className="mt-0.5 text-sm text-[var(--brand-navy)]">{book.publication_year ?? "N/A"}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium uppercase tracking-wider text-gray-400">Shelf</p>
-                    <p className="mt-0.5 text-sm text-[var(--brand-navy)]">{book.shelf_location ?? "N/A"}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium uppercase tracking-wider text-gray-400">Total Copies</p>
-                    <p className="mt-0.5 text-sm font-semibold text-[var(--brand-navy)]">{book.total_copies}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium uppercase tracking-wider text-gray-400">Available</p>
-                    <p className="mt-0.5 text-sm font-semibold text-emerald-600">{book.available_copies}</p>
-                  </div>
-                </div>
-                {book.description && (
-                  <div>
-                    <p className="text-xs font-medium uppercase tracking-wider text-gray-400">Description</p>
-                    <p className="mt-0.5 text-sm leading-relaxed text-gray-600">{book.description}</p>
-                  </div>
-                )}
-                <div>
-                  <StatusBadge available={book.available_copies} total={book.total_copies} />
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
-  );
-}
+// ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function BookManagementPage() {
   const supabase = createClient();
@@ -551,27 +465,20 @@ export default function BookManagementPage() {
   const [books, setBooks] = useState<BookRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("All");
-  const [availFilter, setAvailFilter] = useState<string>("All");
+  const [availabilityFilter, setAvailabilityFilter] = useState<string>("All");
 
-  const [modalMode, setModalMode] = useState<"add" | "edit">("add");
+  // Modal state
   const [formOpen, setFormOpen] = useState(false);
+  const [formMode, setFormMode] = useState<"add" | "edit">("add");
   const [editTarget, setEditTarget] = useState<BookRow | null>(null);
-
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<BookRow | null>(null);
-
-  const [viewOpen, setViewOpen] = useState(false);
-  const [viewTarget, setViewTarget] = useState<BookRow | null>(null);
-
+  const [deleting, setDeleting] = useState(false);
   const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
 
-  const showToast = (msg: string, type: "success" | "error" = "success") => {
-    setToast({ msg, type });
-    setTimeout(() => setToast(null), 3500);
-  };
+  // ─── Data Fetching ──────────────────────────────────────────────────────────
 
   const fetchBooks = useCallback(async () => {
     setLoading(true);
@@ -594,26 +501,14 @@ export default function BookManagementPage() {
     fetchBooks();
   }, [fetchBooks]);
 
-  const filtered = books.filter((b) => {
-    const q = search.toLowerCase();
-    const matchSearch =
-      !q ||
-      b.title.toLowerCase().includes(q) ||
-      b.author.toLowerCase().includes(q) ||
-      (b.isbn ?? "").toLowerCase().includes(q) ||
-      (b.category ?? "").toLowerCase().includes(q);
-    const matchCat = categoryFilter === "All" || b.category === categoryFilter;
-    const matchAvail =
-      availFilter === "All" ||
-      (availFilter === "Available" && b.available_copies > 0) ||
-      (availFilter === "Unavailable" && b.available_copies === 0);
-    return matchSearch && matchCat && matchAvail;
-  });
+  // ─── Toast ──────────────────────────────────────────────────────────────────
 
-  const totalBooks = books.length;
-  const totalCopies = books.reduce((s, b) => s + b.total_copies, 0);
-  const availableCopies = books.reduce((s, b) => s + b.available_copies, 0);
-  const unavailableCount = books.filter((b) => b.available_copies === 0).length;
+  const showToast = (msg: string, type: "success" | "error") => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3500);
+  };
+
+  // ─── CRUD ───────────────────────────────────────────────────────────────────
 
   const handleSave = async (form: FormState) => {
     const payload = {
@@ -624,321 +519,463 @@ export default function BookManagementPage() {
       publisher: form.publisher.trim() || null,
       publication_year: form.publication_year ? parseInt(form.publication_year, 10) : null,
       total_copies: parseInt(form.total_copies, 10) || 1,
-      available_copies: parseInt(form.available_copies, 10) || 0,
+      available_copies: parseInt(form.available_copies, 10) || 1,
       shelf_location: form.shelf_location.trim() || null,
       description: form.description.trim() || null,
-      updated_at: new Date().toISOString(),
     };
 
-    if (modalMode === "add") {
-      const { error: insertError } = await supabase.from("books").insert([
-        { ...payload, created_at: new Date().toISOString() },
-      ]);
+    if (formMode === "add") {
+      const { error: insertError } = await supabase.from("books").insert([payload]);
       if (insertError) throw insertError;
-      showToast("Book added successfully.");
+      showToast("Book added successfully.", "success");
     } else if (editTarget) {
       const { error: updateError } = await supabase
         .from("books")
         .update(payload)
         .eq("id", editTarget.id);
       if (updateError) throw updateError;
-      showToast("Book updated successfully.");
+      showToast("Book updated successfully.", "success");
     }
     await fetchBooks();
   };
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
-    const { error: deleteError } = await supabase
-      .from("books")
-      .delete()
-      .eq("id", deleteTarget.id);
-    if (deleteError) throw deleteError;
-    showToast("Book deleted.");
-    await fetchBooks();
+    setDeleting(true);
+    try {
+      const { error: deleteError } = await supabase
+        .from("books")
+        .delete()
+        .eq("id", deleteTarget.id);
+      if (deleteError) throw deleteError;
+      showToast("Book deleted.", "success");
+      setDeleteOpen(false);
+      setDeleteTarget(null);
+      await fetchBooks();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Delete failed.", "error");
+    } finally {
+      setDeleting(false);
+    }
   };
 
-  return (
-    <div className="min-h-screen bg-[var(--brand-cream)]">
-      {/* Toast */}
-      <AnimatePresence>
-        {toast && (
-          <motion.div
-            className={cn(
-              "fixed right-4 top-4 z-[100] flex items-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium shadow-lg",
-              toast.type === "success"
-                ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-                : "border-red-200 bg-red-50 text-red-800"
-            )}
-            initial={{ opacity: 0, y: -12, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -12, scale: 0.95 }}
-            transition={{ duration: 0.22 }}
-          >
-            {toast.type === "success" ? (
-              <Check className="h-4 w-4 text-emerald-600" />
-            ) : (
-              <AlertCircle className="h-4 w-4 text-red-600" />
-            )}
-            {toast.msg}
-          </motion.div>
-        )}
-      </AnimatePresence>
+  // ─── Filtering ──────────────────────────────────────────────────────────────
 
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        {/* Page Header */}
-        <Reveal>
-          <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight text-[var(--brand-navy)] sm:text-3xl">
-                Book Management
-              </h1>
-              <p className="mt-1 text-sm text-gray-500">
-                Add, edit, and manage the library catalog. Track availability and shelf locations.
-              </p>
+  const filtered = books.filter((b) => {
+    const q = search.toLowerCase();
+    const matchSearch =
+      !q ||
+      b.title.toLowerCase().includes(q) ||
+      b.author.toLowerCase().includes(q) ||
+      (b.isbn ?? "").toLowerCase().includes(q) ||
+      (b.category ?? "").toLowerCase().includes(q);
+
+    const matchCategory =
+      categoryFilter === "All" || b.category === categoryFilter;
+
+    const matchAvailability =
+      availabilityFilter === "All" ||
+      (availabilityFilter === "Available" && (b.available_copies ?? 0) > 0) ||
+      (availabilityFilter === "Unavailable" && (b.available_copies ?? 0) === 0);
+
+    return matchSearch && matchCategory && matchAvailability;
+  });
+
+  // ─── Stats ──────────────────────────────────────────────────────────────────
+
+  const totalBooks = books.length;
+  const availableBooks = books.filter((b) => (b.available_copies ?? 0) > 0).length;
+  const unavailableBooks = books.filter((b) => (b.available_copies ?? 0) === 0).length;
+  const totalCopies = books.reduce((sum, b) => sum + (b.total_copies ?? 0), 0);
+
+  return (
+    <div className="min-h-screen" style={{ background: "#f5f0e8" }}>
+      {/* ── Page Header ─────────────────────────────────────────────────────── */}
+      <div
+        className="relative overflow-hidden"
+        style={{ background: "linear-gradient(135deg, #1e3a5f 0%, #2a4f7c 100%)" }}
+      >
+        {/* Decorative circles */}
+        <div className="absolute -top-16 -right-16 w-64 h-64 rounded-full bg-white/5 pointer-events-none" />
+        <div className="absolute -bottom-8 -left-8 w-40 h-40 rounded-full bg-white/5 pointer-events-none" />
+        <div className="absolute top-1/2 right-1/4 w-24 h-24 rounded-full bg-[#c8a96e]/10 pointer-events-none" />
+
+        <div className="container-lms relative py-10">
+          <motion.div
+            className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.45, ease: "easeOut" }}
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-[#c8a96e]/20 border border-[#c8a96e]/30 flex items-center justify-center flex-shrink-0">
+                <Library className="w-6 h-6 text-[#c8a96e]" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-[#c8a96e] text-xs font-semibold uppercase tracking-widest">Catalog</span>
+                  <ChevronRight className="w-3 h-3 text-white/30" />
+                  <span className="text-white/50 text-xs">Book Management</span>
+                </div>
+                <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">Book Management</h1>
+                <p className="text-white/60 text-sm mt-0.5">
+                  {loading ? "Loading catalog..." : `${totalBooks} book${totalBooks !== 1 ? "s" : ""} in catalog · ${totalCopies} total copies`}
+                </p>
+              </div>
             </div>
-            <motion.button
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
-              onClick={() => {
-                setModalMode("add");
-                setEditTarget(null);
-                setFormOpen(true);
-              }}
-              className="flex items-center gap-2 rounded-xl bg-[var(--brand-navy)] px-5 py-2.5 text-sm font-semibold text-white shadow-[0_2px_8px_rgba(30,58,95,0.25)] transition hover:bg-[var(--brand-navy)]/90"
-            >
-              <Plus className="h-4 w-4" />
-              Add New Book
-            </motion.button>
+
+            <div className="flex items-center gap-3">
+              <button
+                onClick={fetchBooks}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/20 text-white text-sm font-medium transition-all duration-200"
+              >
+                <RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} />
+                Refresh
+              </button>
+              <button
+                onClick={() => { setFormMode("add"); setEditTarget(null); setFormOpen(true); }}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-[#1e3a5f] transition-all duration-200 shadow-[0_2px_8px_rgba(200,169,110,0.4)] hover:shadow-[0_4px_16px_rgba(200,169,110,0.5)] hover:scale-[1.02]"
+                style={{ background: "linear-gradient(135deg, #c8a96e 0%, #b8944f 100%)" }}
+              >
+                <Plus className="w-4 h-4" />
+                Add Book
+              </button>
+            </div>
+          </motion.div>
+
+          {/* Stat pills */}
+          <motion.div
+            className="flex flex-wrap gap-3 mt-6"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.45, ease: "easeOut", delay: 0.1 }}
+          >
+            {[
+              { label: "Total Books", value: totalBooks, color: "bg-white/10 text-white" },
+              { label: "Available", value: availableBooks, color: "bg-emerald-500/20 text-emerald-300" },
+              { label: "Unavailable", value: unavailableBooks, color: "bg-red-500/20 text-red-300" },
+              { label: "Total Copies", value: totalCopies, color: "bg-[#c8a96e]/20 text-[#c8a96e]" },
+            ].map((stat) => (
+              <div
+                key={stat.label}
+                className={cn("flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium border border-white/10", stat.color)}
+              >
+                <span className="font-bold">{stat.value}</span>
+                <span className="opacity-70">{stat.label}</span>
+              </div>
+            ))}
+          </motion.div>
+        </div>
+      </div>
+
+      {/* ── Main Content ─────────────────────────────────────────────────────── */}
+      <div className="container-lms py-8 space-y-6">
+
+        {/* ── Search & Filter Bar ──────────────────────────────────────────── */}
+        <Reveal>
+          <div className="bg-white rounded-2xl border border-[#d6cfc2] shadow-[0_1px_3px_rgba(30,58,95,0.06),0_8px_24px_-8px_rgba(30,58,95,0.10)] p-5 space-y-4">
+            {/* Search input */}
+            <div className="relative">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400 pointer-events-none" style={{ width: 18, height: 18 }} />
+              <input
+                type="text"
+                placeholder="Search by title, author, ISBN, or category..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[#d6cfc2] bg-[#f5f0e8]/60 text-sm text-[#1a2a3a] placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#c8a96e]/50 focus:border-[#c8a96e] transition-all duration-200"
+              />
+              {search && (
+                <button
+                  onClick={() => setSearch("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-slate-200 hover:bg-slate-300 flex items-center justify-center transition-colors"
+                >
+                  <X className="w-3 h-3 text-slate-600" />
+                </button>
+              )}
+            </div>
+
+            {/* Filters row */}
+            <div className="flex flex-col sm:flex-row gap-4">
+              {/* Category pills */}
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-[#1e3a5f] uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                  <Tag className="w-3.5 h-3.5 text-[#c8a96e]" />
+                  Category
+                </p>
+                <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+                  {BOOK_CATEGORIES.map((cat) => (
+                    <button
+                      key={cat}
+                      onClick={() => setCategoryFilter(cat)}
+                      className={cn(
+                        "flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200",
+                        categoryFilter === cat
+                          ? "bg-[#1e3a5f] text-white border-[#1e3a5f] shadow-sm"
+                          : "bg-white text-[#1a2a3a] border-[#d6cfc2] hover:border-[#1e3a5f]/40 hover:bg-[#f5f0e8]"
+                      )}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Availability toggle */}
+              <div className="flex-shrink-0">
+                <p className="text-xs font-semibold text-[#1e3a5f] uppercase tracking-wide mb-2 flex items-center gap-1.5">
+                  <Filter className="w-3.5 h-3.5 text-[#c8a96e]" />
+                  Availability
+                </p>
+                <div className="flex gap-1.5">
+                  {AVAILABILITY_FILTERS.map((f) => (
+                    <button
+                      key={f}
+                      onClick={() => setAvailabilityFilter(f)}
+                      className={cn(
+                        "px-3.5 py-1.5 rounded-xl text-xs font-semibold border transition-all duration-200",
+                        availabilityFilter === f
+                          ? f === "Available"
+                            ? "bg-emerald-600 text-white border-emerald-600"
+                            : f === "Unavailable"
+                            ? "bg-red-600 text-white border-red-600"
+                            : "bg-[#1e3a5f] text-white border-[#1e3a5f]"
+                          : "bg-white text-[#1a2a3a] border-[#d6cfc2] hover:bg-[#f5f0e8]"
+                      )}
+                    >
+                      {f}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Results count */}
+            {!loading && (
+              <p className="text-xs text-slate-500">
+                Showing <span className="font-semibold text-[#1e3a5f]">{filtered.length}</span> of{" "}
+                <span className="font-semibold text-[#1e3a5f]">{books.length}</span> books
+                {search && <> matching &ldquo;<span className="italic">{search}</span>&rdquo;</>}
+              </p>
+            )}
           </div>
         </Reveal>
 
-        {/* Stats Row */}
-        <Reveal delay={0.05}>
+        {/* ── Error State ──────────────────────────────────────────────────── */}
+        {error && (
+          <div className="flex items-center gap-3 rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">
+            <AlertCircle className="h-5 w-5 flex-shrink-0" />
+            <span>{error}</span>
+            <button onClick={fetchBooks} className="ml-auto text-xs underline hover:no-underline">Retry</button>
+          </div>
+        )}
+
+        {/* ── Loading Skeleton ─────────────────────────────────────────────── */}
+        {loading && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div
+                key={i}
+                className="bg-white rounded-2xl border border-[#d6cfc2] p-5 animate-pulse"
+              >
+                <div className="flex items-start gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-xl bg-slate-100 flex-shrink-0" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 bg-slate-100 rounded-lg w-3/4" />
+                    <div className="h-3 bg-slate-100 rounded-lg w-1/2" />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="h-3 bg-slate-100 rounded-lg w-full" />
+                  <div className="h-3 bg-slate-100 rounded-lg w-2/3" />
+                </div>
+                <div className="mt-4 flex gap-2">
+                  <div className="h-6 bg-slate-100 rounded-full w-20" />
+                  <div className="h-6 bg-slate-100 rounded-full w-16" />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* ── Books Grid ───────────────────────────────────────────────────── */}
+        {!loading && filtered.length > 0 && (
           <motion.div
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
             variants={staggerContainer}
             initial="hidden"
             animate="visible"
-            className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-4"
           >
-            {[
-              { label: "Total Titles", value: totalBooks, color: "text-[var(--brand-navy)]", bg: "bg-[var(--brand-navy)]/5" },
-              { label: "Total Copies", value: totalCopies, color: "text-[var(--brand-gold)]", bg: "bg-[var(--brand-gold)]/10" },
-              { label: "Available", value: availableCopies, color: "text-emerald-600", bg: "bg-emerald-50" },
-              { label: "Unavailable Titles", value: unavailableCount, color: "text-red-600", bg: "bg-red-50" },
-            ].map((stat) => (
+            {filtered.map((book) => (
               <motion.div
-                key={stat.label}
-                variants={scaleIn}
-                className={cn(
-                  "rounded-2xl border border-[var(--brand-border)] p-5 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_4px_12px_-4px_rgba(0,0,0,0.08)]",
-                  stat.bg
-                )}
+                key={book.id}
+                variants={fadeInUp}
+                whileHover={{ y: -4, boxShadow: "0 12px 40px -8px rgba(30,58,95,0.18)" }}
+                transition={{ duration: 0.2 }}
+                className="group bg-white rounded-2xl border border-[#d6cfc2] shadow-[0_1px_2px_rgba(0,0,0,0.04),0_4px_16px_-4px_rgba(0,0,0,0.06)] overflow-hidden flex flex-col"
               >
-                <p className="text-xs font-medium uppercase tracking-wider text-gray-500">{stat.label}</p>
-                <p className={cn("mt-1.5 text-3xl font-bold", stat.color)}>{stat.value}</p>
+                {/* Card top accent */}
+                <div
+                  className="h-1.5 w-full flex-shrink-0"
+                  style={{
+                    background:
+                      (book.available_copies ?? 0) === 0
+                        ? "linear-gradient(90deg, #e74c3c, #c0392b)"
+                        : (book.available_copies ?? 0) / (book.total_copies ?? 1) < 0.4
+                        ? "linear-gradient(90deg, #f39c12, #e67e22)"
+                        : "linear-gradient(90deg, #27ae60, #2ecc71)",
+                  }}
+                />
+
+                <div className="p-5 flex flex-col flex-1">
+                  {/* Book icon + title */}
+                  <div className="flex items-start gap-3 mb-3">
+                    <div className="w-10 h-10 rounded-xl bg-[#1e3a5f]/8 flex items-center justify-center flex-shrink-0 group-hover:bg-[#1e3a5f]/12 transition-colors">
+                      <BookOpen className="w-5 h-5 text-[#1e3a5f]" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-[#1e3a5f] text-sm leading-snug line-clamp-2">
+                        {book.title}
+                      </h3>
+                      <p className="text-xs text-slate-500 mt-0.5 truncate">{book.author}</p>
+                    </div>
+                  </div>
+
+                  {/* Meta info */}
+                  <div className="space-y-1.5 mb-3 flex-1">
+                    {book.category && (
+                      <div className="flex items-center gap-1.5">
+                        <Tag className="w-3 h-3 text-[#c8a96e] flex-shrink-0" />
+                        <span className="text-xs text-slate-500 truncate">{book.category}</span>
+                      </div>
+                    )}
+                    {book.isbn && (
+                      <div className="flex items-center gap-1.5">
+                        <Hash className="w-3 h-3 text-slate-400 flex-shrink-0" />
+                        <span className="text-xs text-slate-400 font-mono truncate">{book.isbn}</span>
+                      </div>
+                    )}
+                    {book.shelf_location && (
+                      <div className="flex items-center gap-1.5">
+                        <MapPin className="w-3 h-3 text-slate-400 flex-shrink-0" />
+                        <span className="text-xs text-slate-400 truncate">{book.shelf_location}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Status + copies */}
+                  <div className="flex items-center justify-between mb-4">
+                    <StatusBadge
+                      available={book.available_copies ?? 0}
+                      total={book.total_copies ?? 0}
+                    />
+                    <span className="text-xs text-slate-400 font-medium">
+                      {book.available_copies ?? 0}/{book.total_copies ?? 0} copies
+                    </span>
+                  </div>
+
+                  {/* Action buttons */}
+                  <div className="flex gap-2 pt-3 border-t border-[#f0ebe0]">
+                    <button
+                      onClick={() => { setEditTarget(book); setFormMode("edit"); setFormOpen(true); }}
+                      className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-[#d6cfc2] bg-[#f5f0e8]/60 hover:bg-[#1e3a5f] hover:text-white hover:border-[#1e3a5f] text-xs font-medium text-[#1e3a5f] transition-all duration-200"
+                    >
+                      <Edit className="w-3.5 h-3.5" />
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => { setDeleteTarget(book); setDeleteOpen(true); }}
+                      className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-red-200 bg-red-50/60 hover:bg-red-600 hover:text-white hover:border-red-600 text-xs font-medium text-red-600 transition-all duration-200"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      Delete
+                    </button>
+                  </div>
+                </div>
               </motion.div>
             ))}
           </motion.div>
-        </Reveal>
+        )}
 
-        {/* Filters */}
-        <Reveal delay={0.1}>
-          <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center">
-            {/* Search */}
-            <div className="relative flex-1">
-              <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search by title, author, ISBN, or category..."
-                className="w-full rounded-xl border border-[var(--brand-border)] bg-white py-2.5 pl-10 pr-4 text-sm text-[var(--brand-navy)] placeholder-gray-400 outline-none transition focus:border-[var(--brand-gold)] focus:ring-2 focus:ring-[var(--brand-gold)]/20"
-              />
-            </div>
-
-            {/* Category filter */}
-            <div className="relative">
-              <Filter className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-              <select
-                value={categoryFilter}
-                onChange={(e) => setCategoryFilter(e.target.value)}
-                className="appearance-none rounded-xl border border-[var(--brand-border)] bg-white py-2.5 pl-9 pr-8 text-sm text-[var(--brand-navy)] outline-none transition focus:border-[var(--brand-gold)] focus:ring-2 focus:ring-[var(--brand-gold)]/20"
-              >
-                {BOOK_CATEGORIES.map((c) => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-            </div>
-
-            {/* Availability filter */}
-            <div className="relative">
-              <select
-                value={availFilter}
-                onChange={(e) => setAvailFilter(e.target.value)}
-                className="appearance-none rounded-xl border border-[var(--brand-border)] bg-white py-2.5 pl-4 pr-8 text-sm text-[var(--brand-navy)] outline-none transition focus:border-[var(--brand-gold)] focus:ring-2 focus:ring-[var(--brand-gold)]/20"
-              >
-                {AVAILABILITY_FILTERS.map((f) => (
-                  <option key={f} value={f}>{f}</option>
-                ))}
-              </select>
-              <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-            </div>
-          </div>
-        </Reveal>
-
-        {/* Table */}
-        <Reveal delay={0.15}>
-          <div className="overflow-hidden rounded-2xl border border-[var(--brand-border)] bg-white shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_-8px_rgba(0,0,0,0.08)]">
-            {loading ? (
-              <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-                <span className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--brand-gold)]/30 border-t-[var(--brand-gold)]" />
-                <p className="mt-3 text-sm">Loading books...</p>
+        {/* ── Empty State ──────────────────────────────────────────────────── */}
+        {!loading && filtered.length === 0 && !error && (
+          <Reveal>
+            <div className="flex flex-col items-center justify-center py-20 text-center">
+              <div className="w-16 h-16 rounded-2xl bg-[#1e3a5f]/8 flex items-center justify-center mb-4">
+                <BookOpen className="w-8 h-8 text-[#1e3a5f]/40" />
               </div>
-            ) : error ? (
-              <div className="flex flex-col items-center justify-center py-20 text-red-500">
-                <AlertCircle className="h-8 w-8" />
-                <p className="mt-2 text-sm">{error}</p>
+              <h3 className="text-lg font-semibold text-[#1e3a5f] mb-2">
+                {search || categoryFilter !== "All" || availabilityFilter !== "All"
+                  ? "No books match your filters"
+                  : "No books in catalog yet"}
+              </h3>
+              <p className="text-sm text-slate-500 max-w-sm mb-6">
+                {search || categoryFilter !== "All" || availabilityFilter !== "All"
+                  ? "Try adjusting your search or filter criteria."
+                  : "Start building your library catalog by adding the first book."}
+              </p>
+              {!(search || categoryFilter !== "All" || availabilityFilter !== "All") && (
                 <button
-                  onClick={fetchBooks}
-                  className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-xs font-medium text-red-700 hover:bg-red-100"
+                  onClick={() => { setFormMode("add"); setEditTarget(null); setFormOpen(true); }}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-[#1e3a5f] shadow-[0_2px_8px_rgba(200,169,110,0.35)] hover:shadow-[0_4px_16px_rgba(200,169,110,0.45)] hover:scale-[1.02] transition-all duration-200"
+                  style={{ background: "linear-gradient(135deg, #c8a96e 0%, #b8944f 100%)" }}
                 >
-                  Retry
+                  <Plus className="w-4 h-4" />
+                  Add First Book
                 </button>
-              </div>
-            ) : filtered.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-                <BookOpen className="h-10 w-10 opacity-40" />
-                <p className="mt-3 text-sm font-medium">No books found</p>
-                <p className="text-xs">Try adjusting your search or filters.</p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-[var(--brand-border)] bg-[var(--brand-navy)]/5">
-                      <th className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-[var(--brand-navy)]">Title / Author</th>
-                      <th className="hidden px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-[var(--brand-navy)] md:table-cell">Category</th>
-                      <th className="hidden px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-[var(--brand-navy)] lg:table-cell">ISBN</th>
-                      <th className="hidden px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-[var(--brand-navy)] sm:table-cell">Copies</th>
-                      <th className="px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-[var(--brand-navy)]">Status</th>
-                      <th className="hidden px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-[var(--brand-navy)] lg:table-cell">Shelf</th>
-                      <th className="px-4 py-3.5 text-right text-xs font-semibold uppercase tracking-wider text-[var(--brand-navy)]">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[var(--brand-border)]">
-                    <AnimatePresence>
-                      {filtered.map((book, i) => (
-                        <motion.tr
-                          key={book.id}
-                          variants={fadeInUp}
-                          initial="hidden"
-                          animate="visible"
-                          transition={{ delay: i * 0.03 }}
-                          className="group transition-colors hover:bg-[var(--brand-cream)]/60"
-                        >
-                          <td className="px-5 py-4">
-                            <p className="font-semibold text-[var(--brand-navy)] leading-tight">{book.title}</p>
-                            <p className="mt-0.5 text-xs text-gray-500">{book.author}</p>
-                          </td>
-                          <td className="hidden px-4 py-4 md:table-cell">
-                            {book.category ? (
-                              <span className="inline-flex items-center rounded-full bg-[var(--brand-navy)]/8 px-2.5 py-0.5 text-xs font-medium text-[var(--brand-navy)]">
-                                {book.category}
-                              </span>
-                            ) : (
-                              <span className="text-xs text-gray-400">N/A</span>
-                            )}
-                          </td>
-                          <td className="hidden px-4 py-4 text-xs text-gray-500 lg:table-cell">
-                            {book.isbn ?? "N/A"}
-                          </td>
-                          <td className="hidden px-4 py-4 sm:table-cell">
-                            <span className="text-sm font-medium text-[var(--brand-navy)]">{book.available_copies}</span>
-                            <span className="text-xs text-gray-400"> / {book.total_copies}</span>
-                          </td>
-                          <td className="px-4 py-4">
-                            <StatusBadge available={book.available_copies} total={book.total_copies} />
-                          </td>
-                          <td className="hidden px-4 py-4 text-xs text-gray-500 lg:table-cell">
-                            {book.shelf_location ?? "N/A"}
-                          </td>
-                          <td className="px-4 py-4 text-right">
-                            <div className="flex items-center justify-end gap-1">
-                              <motion.button
-                                whileHover={{ scale: 1.1 }}
-                                whileTap={{ scale: 0.9 }}
-                                onClick={() => { setViewTarget(book); setViewOpen(true); }}
-                                className="rounded-lg p-1.5 text-gray-400 transition hover:bg-[var(--brand-navy)]/8 hover:text-[var(--brand-navy)]"
-                                title="View details"
-                              >
-                                <Eye className="h-4 w-4" />
-                              </motion.button>
-                              <motion.button
-                                whileHover={{ scale: 1.1 }}
-                                whileTap={{ scale: 0.9 }}
-                                onClick={() => {
-                                  setModalMode("edit");
-                                  setEditTarget(book);
-                                  setFormOpen(true);
-                                }}
-                                className="rounded-lg p-1.5 text-gray-400 transition hover:bg-[var(--brand-gold)]/10 hover:text-[var(--brand-gold)]"
-                                title="Edit book"
-                              >
-                                <Edit className="h-4 w-4" />
-                              </motion.button>
-                              <motion.button
-                                whileHover={{ scale: 1.1 }}
-                                whileTap={{ scale: 0.9 }}
-                                onClick={() => { setDeleteTarget(book); setDeleteOpen(true); }}
-                                className="rounded-lg p-1.5 text-gray-400 transition hover:bg-red-50 hover:text-red-600"
-                                title="Delete book"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </motion.button>
-                            </div>
-                          </td>
-                        </motion.tr>
-                      ))}
-                    </AnimatePresence>
-                  </tbody>
-                </table>
-              </div>
-            )}
-
-            {/* Table footer */}
-            {!loading && !error && filtered.length > 0 && (
-              <div className="border-t border-[var(--brand-border)] bg-[var(--brand-cream)]/40 px-5 py-3">
-                <p className="text-xs text-gray-500">
-                  Showing <span className="font-medium text-[var(--brand-navy)]">{filtered.length}</span> of{" "}
-                  <span className="font-medium text-[var(--brand-navy)]">{totalBooks}</span> books
-                </p>
-              </div>
-            )}
-          </div>
-        </Reveal>
+              )}
+            </div>
+          </Reveal>
+        )}
       </div>
 
-      {/* Modals */}
+      {/* ── Modals ───────────────────────────────────────────────────────────── */}
       <BookFormModal
         open={formOpen}
         onClose={() => setFormOpen(false)}
         onSave={handleSave}
         initial={editTarget}
-        mode={modalMode}
+        mode={formMode}
       />
+
       <DeleteConfirmModal
         open={deleteOpen}
         book={deleteTarget}
-        onClose={() => setDeleteOpen(false)}
+        onClose={() => { setDeleteOpen(false); setDeleteTarget(null); }}
         onConfirm={handleDelete}
+        deleting={deleting}
       />
-      <ViewBookModal
-        open={viewOpen}
-        book={viewTarget}
-        onClose={() => setViewOpen(false)}
-      />
+
+      {/* ── Toast ────────────────────────────────────────────────────────────── */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            key="toast"
+            initial={{ opacity: 0, y: 24, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 24, scale: 0.95 }}
+            transition={{ duration: 0.25, ease: "easeOut" }}
+            className={cn(
+              "fixed bottom-6 right-6 z-[60] flex items-center gap-3 rounded-2xl border px-5 py-3.5 text-sm font-medium shadow-[0_8px_32px_-8px_rgba(0,0,0,0.25)]",
+              toast.type === "success"
+                ? "bg-white border-emerald-200 text-emerald-700"
+                : "bg-white border-red-200 text-red-700"
+            )}
+          >
+            {toast.type === "success" ? (
+              <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+                <svg className="w-3.5 h-3.5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+            ) : (
+              <div className="w-6 h-6 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                <AlertCircle className="w-3.5 h-3.5 text-red-600" />
+              </div>
+            )}
+            {toast.msg}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -3,15 +3,11 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { BookOpen, AlertCircle, Clock, Search, ArrowRight, CheckCircle, RotateCcw, TrendingUp, Calendar, User, ChevronRight } from 'lucide-react';
+import { BookOpen, AlertCircle, Clock, Search, ArrowRight, CheckCircle, RotateCcw, TrendingUp, Calendar, User, ChevronRight, DollarSign, Activity, BookMarked, Zap } from 'lucide-react';
 import { Reveal } from "@/components/Reveal";
 import { staggerContainer, fadeInUp } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
-type APP_NAME = any;
-const APP_NAME: any = [];
-type APP_TAGLINE = any;
-const APP_TAGLINE: any = [];
 
 // ─── Types ──────────────────────────────────────────────────────────────────────
 
@@ -95,13 +91,26 @@ function formatDate(dateStr: string): string {
 function getStatusColor(status: string): string {
   switch (status) {
     case "returned":
-      return "bg-emerald-100 text-emerald-700";
+      return "bg-emerald-100 text-emerald-700 border-emerald-200";
     case "overdue":
-      return "bg-red-100 text-red-700";
+      return "bg-red-100 text-red-700 border-red-200";
     case "issued":
-      return "bg-blue-100 text-blue-700";
+      return "bg-blue-100 text-blue-700 border-blue-200";
     default:
-      return "bg-gray-100 text-gray-600";
+      return "bg-gray-100 text-gray-600 border-gray-200";
+  }
+}
+
+function getStatusIcon(status: string) {
+  switch (status) {
+    case "returned":
+      return <CheckCircle className="h-3 w-3" />;
+    case "overdue":
+      return <AlertCircle className="h-3 w-3" />;
+    case "issued":
+      return <BookOpen className="h-3 w-3" />;
+    default:
+      return null;
   }
 }
 
@@ -144,690 +153,705 @@ function DonutChart({ paid, pending, waived }: { paid: number; pending: number; 
   const pendingPct = (pending / total) * 100;
   const waivedPct = (waived / total) * 100;
 
-  const r = 40;
+  const r = 28;
   const circ = 2 * Math.PI * r;
-
   const paidDash = (paidPct / 100) * circ;
   const pendingDash = (pendingPct / 100) * circ;
   const waivedDash = (waivedPct / 100) * circ;
 
-  const paidOffset = 0;
-  const pendingOffset = -paidDash;
-  const waivedOffset = -(paidDash + pendingDash);
+  let offset = 0;
+  const segments = [
+    { dash: paidDash, color: "#27ae60", offset },
+    { dash: pendingDash, color: "#f39c12", offset: (offset += paidDash) },
+    { dash: waivedDash, color: "#2980b9", offset: (offset += pendingDash) },
+  ];
 
   return (
-    <svg viewBox="0 0 100 100" className="h-28 w-28 -rotate-90">
-      <circle cx="50" cy="50" r={r} fill="none" stroke="#f3f4f6" strokeWidth="14" />
-      {paid > 0 && (
-        <circle
-          cx="50"
-          cy="50"
-          r={r}
-          fill="none"
-          stroke="#10b981"
-          strokeWidth="14"
-          strokeDasharray={`${paidDash} ${circ - paidDash}`}
-          strokeDashoffset={paidOffset}
-          strokeLinecap="butt"
-        />
-      )}
-      {pending > 0 && (
-        <circle
-          cx="50"
-          cy="50"
-          r={r}
-          fill="none"
-          stroke="#ef4444"
-          strokeWidth="14"
-          strokeDasharray={`${pendingDash} ${circ - pendingDash}`}
-          strokeDashoffset={pendingOffset}
-          strokeLinecap="butt"
-        />
-      )}
-      {waived > 0 && (
-        <circle
-          cx="50"
-          cy="50"
-          r={r}
-          fill="none"
-          stroke="#c8a96e"
-          strokeWidth="14"
-          strokeDasharray={`${waivedDash} ${circ - waivedDash}`}
-          strokeDashoffset={waivedOffset}
-          strokeLinecap="butt"
-        />
+    <svg width="72" height="72" viewBox="0 0 72 72" className="rotate-[-90deg]">
+      <circle cx="36" cy="36" r={r} fill="none" stroke="#e5e7eb" strokeWidth="8" />
+      {segments.map((seg, i) =>
+        seg.dash > 0 ? (
+          <circle
+            key={i}
+            cx="36"
+            cy="36"
+            r={r}
+            fill="none"
+            stroke={seg.color}
+            strokeWidth="8"
+            strokeDasharray={`${seg.dash} ${circ - seg.dash}`}
+            strokeDashoffset={-seg.offset}
+            strokeLinecap="round"
+          />
+        ) : null
       )}
     </svg>
   );
 }
 
-// ─── Action type icon ────────────────────────────────────────────────────────────
+function timeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+}
 
-function ActionIcon({ type }: { type: string }) {
-  if (type.includes("issue"))
-    return <BookOpen className="h-4 w-4 text-[var(--brand-primary)]" />;
-  if (type.includes("return"))
-    return <RotateCcw className="h-4 w-4 text-emerald-600" />;
-  if (type.includes("fine") || type.includes("paid"))
-    return <AlertCircle className="h-4 w-4 text-amber-500" />;
-  return <TrendingUp className="h-4 w-4 text-gray-400" />;
+function activityDotColor(actionType: string): string {
+  if (actionType.includes("issue")) return "bg-blue-500";
+  if (actionType.includes("return")) return "bg-emerald-500";
+  if (actionType.includes("fine")) return "bg-amber-500";
+  if (actionType.includes("login")) return "bg-purple-500";
+  return "bg-slate-400";
+}
+
+function activityIcon(actionType: string) {
+  if (actionType.includes("issue")) return <BookMarked className="h-3.5 w-3.5 text-blue-600" />;
+  if (actionType.includes("return")) return <RotateCcw className="h-3.5 w-3.5 text-emerald-600" />;
+  if (actionType.includes("fine")) return <DollarSign className="h-3.5 w-3.5 text-amber-600" />;
+  return <Activity className="h-3.5 w-3.5 text-slate-500" />;
+}
+
+// ─── Quick Action Card ───────────────────────────────────────────────────────────
+
+function QuickActionCard({
+  href,
+  icon: Icon,
+  title,
+  description,
+  accentColor,
+  bgColor,
+}: {
+  href: string;
+  icon: React.ElementType;
+  title: string;
+  description: string;
+  accentColor: string;
+  bgColor: string;
+}) {
+  return (
+    <Link href={href}>
+      <motion.div
+        whileHover={{ y: -4, boxShadow: "0 12px 40px -8px rgba(30,58,95,0.20)" }}
+        transition={{ duration: 0.2, ease: "easeOut" }}
+        className="group relative flex items-center gap-4 rounded-2xl border border-[#d6cfc2] bg-white p-5 cursor-pointer transition-all duration-200 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_4px_16px_-4px_rgba(0,0,0,0.08)] overflow-hidden"
+      >
+        {/* Subtle background accent */}
+        <div
+          className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+          style={{ background: `radial-gradient(ellipse at top left, ${bgColor} 0%, transparent 60%)` }}
+        />
+        <div
+          className="relative flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center"
+          style={{ backgroundColor: bgColor }}
+        >
+          <Icon className="w-5 h-5" style={{ color: accentColor }} />
+        </div>
+        <div className="relative flex-1 min-w-0">
+          <p className="font-semibold text-[#1a2a3a] text-sm leading-tight">{title}</p>
+          <p className="text-xs text-slate-500 mt-0.5 leading-snug">{description}</p>
+        </div>
+        <ArrowRight
+          className="relative flex-shrink-0 w-4 h-4 text-slate-300 group-hover:text-slate-500 group-hover:translate-x-1 transition-all duration-200"
+        />
+      </motion.div>
+    </Link>
+  );
+}
+
+// ─── Stat Card ───────────────────────────────────────────────────────────────────
+
+function StatCard({
+  label,
+  value,
+  icon: Icon,
+  iconBg,
+  iconColor,
+  borderColor,
+  sub,
+}: {
+  label: string;
+  value: string | number;
+  icon: React.ElementType;
+  iconBg: string;
+  iconColor: string;
+  borderColor: string;
+  sub?: string;
+}) {
+  return (
+    <motion.div
+      whileHover={{ y: -4, boxShadow: "0 12px 40px -8px rgba(30,58,95,0.18)" }}
+      transition={{ duration: 0.2, ease: "easeOut" }}
+      className="relative bg-white rounded-2xl border border-[#d6cfc2] p-5 flex items-center gap-4 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_4px_16px_-4px_rgba(0,0,0,0.08)] overflow-hidden"
+    >
+      {/* Left border accent */}
+      <div
+        className="absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl"
+        style={{ backgroundColor: borderColor }}
+      />
+      <div
+        className="flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center"
+        style={{ backgroundColor: iconBg }}
+      >
+        <Icon className="w-5 h-5" style={{ color: iconColor }} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-2xl font-bold text-[#1a2a3a] leading-none tracking-tight">{value}</p>
+        <p className="text-xs text-slate-500 mt-1 leading-snug">{label}</p>
+        {sub && <p className="text-xs text-slate-400 mt-0.5">{sub}</p>}
+      </div>
+    </motion.div>
+  );
 }
 
 // ─── Page ────────────────────────────────────────────────────────────────────────
 
-export default function DashboardPage() {
+export default function MemberDashboard() {
   const supabase = createClient();
 
   const [user, setUser] = useState<UserRow | null>(null);
-  const [issues, setIssues] = useState<EnrichedIssue[]>([]);
+  const [issuedBooks, setIssuedBooks] = useState<EnrichedIssue[]>([]);
   const [fines, setFines] = useState<FineRow[]>([]);
-  const [activityLogs, setActivityLogs] = useState<ActivityLogRow[]>([]);
+  const [activity, setActivity] = useState<ActivityLogRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    async function load() {
+    async function fetchData() {
       setLoading(true);
-      try {
-        // Auth user
-        const {
-          data: { user: authUser },
-        } = await supabase.auth.getUser();
+      setError(null);
 
-        if (!authUser) {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (!session?.user) {
+          setError("Not authenticated.");
           setLoading(false);
           return;
         }
 
-        // User profile
-        const { data: profile } = await supabase
+        const userId = session.user.id;
+
+        // Fetch user profile
+        const { data: userRow, error: userErr } = await supabase
           .from("users")
           .select("id, full_name, email, role, membership_number, is_active")
-          .eq("id", authUser.id)
+          .eq("id", userId)
           .single();
 
-        if (profile) setUser(profile as UserRow);
+        if (userErr) throw new Error(userErr.message);
+        setUser(userRow);
 
-        // Book issues for this user
-        const { data: issueData } = await supabase
+        // Fetch issued books
+        const { data: issues, error: issueErr } = await supabase
           .from("book_issues")
           .select("*")
-          .eq("user_id", authUser.id)
-          .order("created_at", { ascending: false });
-
-        const rawIssues: BookIssueRow[] = (issueData as BookIssueRow[]) ?? [];
-
-        // Enrich with book data
-        const bookIds = [...new Set(rawIssues.map((i) => i.book_id))];
-        let bookMap: Record<string, BookRow> = {};
-        if (bookIds.length > 0) {
-          const { data: bookData } = await supabase
-            .from("books")
-            .select("id, title, author, isbn, category, shelf_location")
-            .in("id", bookIds);
-          if (bookData) {
-            bookMap = Object.fromEntries(
-              (bookData as BookRow[]).map((b) => [b.id, b])
-            );
-          }
-        }
-
-        const enriched: EnrichedIssue[] = rawIssues.map((issue) => ({
-          ...issue,
-          book: bookMap[issue.book_id],
-        }));
-        setIssues(enriched);
-
-        // Fines for this user
-        const { data: fineData } = await supabase
-          .from("fines")
-          .select("*")
-          .eq("user_id", authUser.id)
-          .order("created_at", { ascending: false });
-        setFines((fineData as FineRow[]) ?? []);
-
-        // Activity logs for this user
-        const { data: logData } = await supabase
-          .from("activity_logs")
-          .select("*")
-          .eq("actor_id", authUser.id)
+          .eq("user_id", userId)
           .order("created_at", { ascending: false })
           .limit(10);
-        setActivityLogs((logData as ActivityLogRow[]) ?? []);
+
+        if (issueErr) throw new Error(issueErr.message);
+
+        // Enrich with book data
+        const enriched: EnrichedIssue[] = [];
+        for (const issue of issues ?? []) {
+          const { data: book } = await supabase
+            .from("books")
+            .select("id, title, author, isbn, category, shelf_location")
+            .eq("id", issue.book_id)
+            .single();
+          enriched.push({ ...issue, book: book ?? undefined });
+        }
+        setIssuedBooks(enriched);
+
+        // Fetch fines
+        const { data: fineRows, error: fineErr } = await supabase
+          .from("fines")
+          .select("*")
+          .eq("user_id", userId)
+          .order("created_at", { ascending: false });
+
+        if (fineErr) throw new Error(fineErr.message);
+        setFines(fineRows ?? []);
+
+        // Fetch activity
+        const { data: activityRows, error: actErr } = await supabase
+          .from("activity_logs")
+          .select("*")
+          .eq("actor_id", userId)
+          .order("created_at", { ascending: false })
+          .limit(8);
+
+        if (actErr) throw new Error(actErr.message);
+        setActivity(activityRows ?? []);
       } catch (err) {
-        console.error("Dashboard load error:", err);
+        setError(err instanceof Error ? err.message : "Failed to load dashboard.");
       } finally {
         setLoading(false);
       }
     }
 
-    load();
+    fetchData();
   }, []);
 
-  // ── Derived stats ──────────────────────────────────────────────────────────
-  const activeIssues = issues.filter((i) => i.status !== "returned");
-  const overdueIssues = issues.filter((i) => i.status === "overdue");
+  // ─── Derived stats ─────────────────────────────────────────────────────────
+  const activeIssues = issuedBooks.filter((i) => i.status === "issued" || i.status === "overdue");
+  const overdueIssues = issuedBooks.filter((i) => i.status === "overdue");
   const pendingFines = fines.filter((f) => f.status === "pending");
-  const paidFines = fines.filter((f) => f.status === "paid");
-  const waivedFines = fines.filter((f) => f.status === "waived");
-  const totalPendingAmount = pendingFines.reduce(
-    (sum, f) => sum + Number(f.total_amount),
-    0
-  );
+  const totalPendingAmount = pendingFines.reduce((sum, f) => sum + f.total_amount, 0);
+  const paidFines = fines.filter((f) => f.status === "paid").length;
+  const waivedFines = fines.filter((f) => f.status === "waived").length;
 
-  const minDaysLeft =
-    activeIssues.length > 0
-      ? Math.min(...activeIssues.map((i) => daysUntilDue(i.due_date)))
-      : null;
-
-  const kpis = [
-    {
-      label: "Books Issued",
-      value: activeIssues.length,
-      sub: `${issues.length} total transactions`,
-      icon: BookOpen,
-      color: "text-[var(--brand-primary)]",
-      bg: "bg-[var(--brand-primary)]/10",
-    },
-    {
-      label: "Pending Fines",
-      value: `PKR ${totalPendingAmount.toFixed(0)}`,
-      sub: `${pendingFines.length} unpaid fine${pendingFines.length !== 1 ? "s" : ""}`,
-      icon: AlertCircle,
-      color: "text-red-600",
-      bg: "bg-red-50",
-    },
-    {
-      label: "Days Until Overdue",
-      value:
-        minDaysLeft === null
-          ? "N/A"
-          : minDaysLeft < 0
-          ? `${Math.abs(minDaysLeft)}d late`
-          : `${minDaysLeft}d`,
-      sub:
-        overdueIssues.length > 0
-          ? `${overdueIssues.length} book(s) overdue`
-          : "All books on time",
-      icon: Clock,
-      color:
-        minDaysLeft !== null && minDaysLeft < 0
-          ? "text-red-600"
-          : "text-amber-600",
-      bg:
-        minDaysLeft !== null && minDaysLeft < 0 ? "bg-red-50" : "bg-amber-50",
-    },
-  ];
-
-  // ── Quick actions ──────────────────────────────────────────────────────────
-  const quickActions = [
-    {
-      label: "Search Books",
-      desc: "Find and browse the catalog",
-      href: "/books/search",
-      icon: Search,
-      color: "bg-[var(--brand-primary)]",
-    },
-    {
-      label: "View Fines",
-      desc: "Check and pay outstanding fines",
-      href: "/fines",
-      icon: AlertCircle,
-      color: "bg-red-500",
-    },
-    {
-      label: "Issue History",
-      desc: "All your past transactions",
-      href: "/transactions/issue-return",
-      icon: RotateCcw,
-      color: "bg-[var(--brand-gold)]",
-    },
-    {
-      label: "My Profile",
-      desc: "View membership details",
-      href: "/profile",
-      icon: User,
-      color: "bg-emerald-600",
-    },
-  ];
-
+  // ─── Loading ───────────────────────────────────────────────────────────────
   if (loading) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-[var(--brand-primary)] border-t-transparent" />
-          <p className="text-sm text-gray-500">Loading your dashboard...</p>
+      <div className="min-h-screen flex items-center justify-center bg-[#f5f0e8]">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 rounded-full border-4 border-[#1e3a5f]/20 border-t-[#1e3a5f] animate-spin" />
+          <p className="text-sm text-slate-500 font-medium">Loading your dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#f5f0e8]">
+        <div className="bg-white rounded-2xl border border-red-200 p-8 max-w-md text-center shadow-lg">
+          <AlertCircle className="w-10 h-10 text-red-500 mx-auto mb-3" />
+          <h2 className="text-lg font-semibold text-[#1a2a3a] mb-1">Something went wrong</h2>
+          <p className="text-sm text-slate-500">{error}</p>
+          <Link
+            href="/login"
+            className="mt-4 inline-flex items-center gap-2 rounded-xl bg-[#1e3a5f] text-white px-5 py-2.5 text-sm font-medium hover:bg-[#162d4a] transition-colors"
+          >
+            Back to Login
+          </Link>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-screen bg-[var(--brand-cream)]">
-      {/* ── Sidebar ── */}
-      <aside className="sticky top-0 hidden h-screen w-56 shrink-0 flex-col border-r border-gray-200 bg-white pt-6 shadow-sm lg:flex">
-        <div className="px-5 pb-4">
-          <p className="text-xs font-semibold uppercase tracking-widest text-gray-400">
-            Member Portal
-          </p>
-        </div>
-        <nav className="flex flex-col gap-1 px-3">
-          {[
-            { label: "My Books", href: "/transactions/issue-return", icon: BookOpen },
-            { label: "Search", href: "/books/search", icon: Search },
-            { label: "Fines", href: "/fines", icon: AlertCircle },
-            { label: "Transactions", href: "/transactions/issue-return", icon: RotateCcw },
-          ].map((item) => (
-            <Link
-              key={item.key ?? item.label}
-              href={item.href}
-              className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-600 transition-all duration-200 hover:bg-[var(--brand-primary)]/8 hover:text-[var(--brand-primary)]"
-            >
-              <item.icon className="h-4 w-4" />
-              {item.label}
-            </Link>
-          ))}
-        </nav>
-        <div className="mt-auto border-t border-gray-100 p-4">
-          <div className="rounded-lg bg-[var(--brand-primary)]/5 p-3">
-            <p className="text-xs font-medium text-[var(--brand-primary)]">
-              {APP_NAME}
-            </p>
-            <p className="mt-0.5 text-[10px] text-gray-400 leading-tight">
-              {APP_TAGLINE}
-            </p>
-          </div>
-        </div>
-      </aside>
+    <div className="min-h-screen bg-[#f5f0e8]">
+      {/* ── Page Header ─────────────────────────────────────────────────────── */}
+      <div
+        className="relative overflow-hidden"
+        style={{ background: "linear-gradient(135deg, #1e3a5f 0%, #2a4f7c 100%)" }}
+      >
+        {/* Decorative blobs */}
+        <div
+          className="absolute -top-24 -right-24 w-96 h-96 rounded-full opacity-10"
+          style={{
+            background:
+              "radial-gradient(circle, #c8a96e 0%, transparent 70%)",
+          }}
+        />
+        <div
+          className="absolute -bottom-16 -left-16 w-72 h-72 rounded-full opacity-10"
+          style={{
+            background:
+              "radial-gradient(circle, #ffffff 0%, transparent 70%)",
+          }}
+        />
+        <div
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] opacity-5"
+          style={{
+            background:
+              "radial-gradient(ellipse, #c8a96e 0%, transparent 60%)",
+          }}
+        />
 
-      {/* ── Main content ── */}
-      <main className="flex-1 overflow-x-hidden px-4 py-8 sm:px-6 lg:px-8">
-        {/* Welcome Banner */}
-        <Reveal>
-          <div className="mb-8 overflow-hidden rounded-2xl bg-gradient-to-br from-[var(--brand-primary)] to-[#2a4f7a] p-6 text-white shadow-[0_4px_24px_-6px_rgba(30,58,95,0.35)]">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-sm font-medium text-white/70">
-                  Welcome back
-                </p>
-                <h1 className="mt-1 text-2xl font-bold tracking-tight text-white">
-                  {user?.full_name ?? "Library Member"}
-                </h1>
-                {user?.membership_number && (
-                  <p className="mt-1 text-sm text-white/60">
-                    Membership No: {user.membership_number}
-                  </p>
-                )}
+        <div className="container-lms relative py-10 md:py-14">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+            <div>
+              {/* Greeting */}
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-8 h-8 rounded-full bg-[#c8a96e]/20 border border-[#c8a96e]/40 flex items-center justify-center">
+                  <User className="w-4 h-4 text-[#c8a96e]" />
+                </div>
+                <span className="text-[#c8a96e] text-sm font-medium tracking-wide">
+                  Member Dashboard
+                </span>
               </div>
-              <div className="flex flex-wrap gap-3">
-                <div className="rounded-xl bg-white/10 px-4 py-2 text-center backdrop-blur-sm">
-                  <p className="text-lg font-bold text-white">
-                    {activeIssues.length}
-                  </p>
-                  <p className="text-xs text-white/70">Active Issues</p>
+              <h1 className="text-3xl md:text-4xl font-bold text-white tracking-tight text-balance">
+                Welcome back,{" "}
+                <span className="text-[#c8a96e]">
+                  {user?.full_name?.split(" ")[0] ?? "Member"}
+                </span>
+              </h1>
+              <p className="mt-2 text-white/60 text-sm leading-relaxed">
+                Here is an overview of your library activity and current borrowings.
+              </p>
+              {user?.membership_number && (
+                <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/20 px-3 py-1.5">
+                  <BookOpen className="w-3.5 h-3.5 text-[#c8a96e]" />
+                  <span className="text-white/80 text-xs font-mono">
+                    {user.membership_number}
+                  </span>
                 </div>
-                <div className="rounded-xl bg-white/10 px-4 py-2 text-center backdrop-blur-sm">
-                  <p className="text-lg font-bold text-white">
-                    {pendingFines.length}
-                  </p>
-                  <p className="text-xs text-white/70">Pending Fines</p>
-                </div>
+              )}
+            </div>
+
+            {/* Header quick stats */}
+            <div className="flex gap-3 flex-wrap">
+              <div className="rounded-2xl bg-white/10 border border-white/20 px-5 py-3 text-center min-w-[90px]">
+                <p className="text-2xl font-bold text-white">{activeIssues.length}</p>
+                <p className="text-white/60 text-xs mt-0.5">Active Issues</p>
+              </div>
+              <div className="rounded-2xl bg-white/10 border border-white/20 px-5 py-3 text-center min-w-[90px]">
+                <p className="text-2xl font-bold text-[#e74c3c]">{overdueIssues.length}</p>
+                <p className="text-white/60 text-xs mt-0.5">Overdue</p>
+              </div>
+              <div className="rounded-2xl bg-white/10 border border-white/20 px-5 py-3 text-center min-w-[90px]">
+                <p className="text-2xl font-bold text-[#c8a96e]">{pendingFines.length}</p>
+                <p className="text-white/60 text-xs mt-0.5">Pending Fines</p>
               </div>
             </div>
           </div>
-        </Reveal>
+        </div>
+      </div>
 
-        {/* KPI Row */}
+      {/* ── Main Content ─────────────────────────────────────────────────────── */}
+      <div className="container-lms py-8 md:py-10 space-y-8">
+
+        {/* ── Stats Row ──────────────────────────────────────────────────────── */}
         <Reveal>
           <motion.div
             variants={staggerContainer}
             initial="hidden"
             animate="visible"
-            className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3"
+            className="grid grid-cols-2 lg:grid-cols-4 gap-4"
           >
-            {kpis.map((kpi) => (
-              <motion.div
-                key={kpi.label}
-                variants={fadeInUp}
-                className="rounded-2xl border border-gray-100 bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04),0_8px_20px_-8px_rgba(0,0,0,0.08)]"
-              >
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-500">
-                      {kpi.label}
-                    </p>
-                    <p
-                      className={cn(
-                        "mt-1 text-2xl font-bold tracking-tight",
-                        kpi.color
-                      )}
-                    >
-                      {kpi.value}
-                    </p>
-                    <p className="mt-0.5 text-xs text-gray-400">{kpi.sub}</p>
-                  </div>
-                  <div className={cn("rounded-xl p-2.5", kpi.bg)}>
-                    <kpi.icon className={cn("h-5 w-5", kpi.color)} />
-                  </div>
-                </div>
-              </motion.div>
-            ))}
+            <motion.div variants={fadeInUp}>
+              <StatCard
+                label="Books Currently Issued"
+                value={activeIssues.length}
+                icon={BookOpen}
+                iconBg="rgba(30,58,95,0.10)"
+                iconColor="#1e3a5f"
+                borderColor="#1e3a5f"
+              />
+            </motion.div>
+            <motion.div variants={fadeInUp}>
+              <StatCard
+                label="Overdue Books"
+                value={overdueIssues.length}
+                icon={AlertCircle}
+                iconBg="rgba(231,76,60,0.10)"
+                iconColor="#e74c3c"
+                borderColor="#e74c3c"
+                sub={overdueIssues.length > 0 ? `PKR ${overdueIssues.length * FINE_RATE}/day accruing` : undefined}
+              />
+            </motion.div>
+            <motion.div variants={fadeInUp}>
+              <StatCard
+                label="Pending Fine Amount"
+                value={`PKR ${totalPendingAmount}`}
+                icon={DollarSign}
+                iconBg="rgba(200,169,110,0.15)"
+                iconColor="#c8a96e"
+                borderColor="#c8a96e"
+                sub={pendingFines.length > 0 ? `${pendingFines.length} unpaid fine${pendingFines.length > 1 ? "s" : ""}` : "All clear"}
+              />
+            </motion.div>
+            <motion.div variants={fadeInUp}>
+              <StatCard
+                label="Total Books Borrowed"
+                value={issuedBooks.length}
+                icon={TrendingUp}
+                iconBg="rgba(39,174,96,0.10)"
+                iconColor="#27ae60"
+                borderColor="#27ae60"
+                sub={`${paidFines + waivedFines} fines resolved`}
+              />
+            </motion.div>
           </motion.div>
         </Reveal>
 
-        {/* Issued Books Table + Fines Overview */}
-        <div className="mb-8 grid grid-cols-1 gap-6 xl:grid-cols-3">
-          {/* Issued Books Table */}
-          <Reveal className="xl:col-span-2">
-            <div className="rounded-2xl border border-gray-100 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04),0_8px_20px_-8px_rgba(0,0,0,0.08)]">
-              <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
-                <h2 className="text-base font-semibold text-gray-800">
-                  Currently Issued Books
-                </h2>
-                <Link
-                  href="/transactions/issue-return"
-                  className="flex items-center gap-1 text-xs font-medium text-[var(--brand-primary)] hover:underline"
-                >
-                  View all <ChevronRight className="h-3 w-3" />
-                </Link>
-              </div>
-              <div className="overflow-x-auto">
-                {activeIssues.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
-                    <BookOpen className="h-10 w-10 text-gray-200" />
-                    <p className="text-sm text-gray-400">
-                      No books currently issued
-                    </p>
-                    <Link
-                      href="/books/search"
-                      className="mt-1 text-xs font-medium text-[var(--brand-primary)] hover:underline"
-                    >
-                      Browse the catalog
-                    </Link>
-                  </div>
-                ) : (
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-gray-50 bg-gray-50/60">
-                        <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-400">
-                          Book
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-400">
-                          Due Date
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-400">
-                          Status
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-400">
-                          Countdown
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-50">
-                      {activeIssues.map((issue) => {
-                        const daysLeft = daysUntilDue(issue.due_date);
-                        const isOverdue = daysLeft < 0;
-                        return (
-                          <tr
-                            key={issue.id}
-                            className={cn(
-                              "transition-colors hover:bg-gray-50/50",
-                              isOverdue && "bg-red-50/40"
-                            )}
-                          >
-                            <td className="px-5 py-3.5">
-                              <p
-                                className={cn(
-                                  "font-medium",
-                                  isOverdue
-                                    ? "text-red-700"
-                                    : "text-gray-800"
-                                )}
-                              >
-                                {issue.book?.title ?? "Unknown Title"}
-                              </p>
-                              <p className="text-xs text-gray-400">
-                                {issue.book?.author ?? ""}
-                              </p>
-                            </td>
-                            <td className="px-4 py-3.5 text-gray-600">
-                              <div className="flex items-center gap-1.5">
-                                <Calendar className="h-3.5 w-3.5 text-gray-300" />
-                                {formatDate(issue.due_date)}
-                              </div>
-                            </td>
-                            <td className="px-4 py-3.5">
-                              <span
-                                className={cn(
-                                  "rounded-full px-2.5 py-0.5 text-xs font-semibold",
-                                  getStatusColor(issue.status)
-                                )}
-                              >
-                                {issue.status.charAt(0).toUpperCase() +
-                                  issue.status.slice(1)}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3.5">
-                              {getDueBadge(daysLeft, issue.status)}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                )}
-              </div>
+        {/* ── Quick Actions ───────────────────────────────────────────────────── */}
+        <Reveal delay={0.05}>
+          <div>
+            <div className="flex items-center gap-2 mb-4">
+              <Zap className="w-4 h-4 text-[#c8a96e]" />
+              <h2 className="text-base font-semibold text-[#1a2a3a]">Quick Actions</h2>
             </div>
-          </Reveal>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <QuickActionCard
+                href="/books/search"
+                icon={Search}
+                title="Search Books"
+                description="Browse the full catalog and check availability"
+                accentColor="#1e3a5f"
+                bgColor="rgba(30,58,95,0.08)"
+              />
+              <QuickActionCard
+                href="/transactions/issue-return"
+                icon={RotateCcw}
+                title="Issue & Return"
+                description="View your active transactions and return books"
+                accentColor="#c8a96e"
+                bgColor="rgba(200,169,110,0.12)"
+              />
+              <QuickActionCard
+                href="/fines"
+                icon={DollarSign}
+                title="My Fines"
+                description="Check pending fines and payment history"
+                accentColor="#e74c3c"
+                bgColor="rgba(231,76,60,0.08)"
+              />
+            </div>
+          </div>
+        </Reveal>
 
-          {/* Fines Overview Card */}
-          <Reveal>
-            <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04),0_8px_20px_-8px_rgba(0,0,0,0.08)]">
-              <div className="mb-4 flex items-center justify-between">
-                <h2 className="text-base font-semibold text-gray-800">
-                  Fines Overview
-                </h2>
+        {/* ── Issued Books ────────────────────────────────────────────────────── */}
+        <Reveal delay={0.08}>
+          <div className="bg-white rounded-2xl border border-[#d6cfc2] shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_-8px_rgba(0,0,0,0.10)] overflow-hidden">
+            {/* Section header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-[#ede8df]">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-[#1e3a5f]/10 flex items-center justify-center">
+                  <BookMarked className="w-4 h-4 text-[#1e3a5f]" />
+                </div>
+                <div>
+                  <h2 className="text-sm font-semibold text-[#1a2a3a]">Issued Books</h2>
+                  <p className="text-xs text-slate-400">{issuedBooks.length} total records</p>
+                </div>
+              </div>
+              <Link
+                href="/transactions/issue-return"
+                className="inline-flex items-center gap-1.5 text-xs font-medium text-[#1e3a5f] hover:text-[#c8a96e] transition-colors"
+              >
+                View all <ChevronRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+
+            {issuedBooks.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="w-14 h-14 rounded-2xl bg-[#f5f0e8] flex items-center justify-center mb-4">
+                  <BookOpen className="w-6 h-6 text-slate-300" />
+                </div>
+                <p className="text-sm font-medium text-slate-500">No books issued yet</p>
+                <p className="text-xs text-slate-400 mt-1">Visit the library to borrow books</p>
                 <Link
-                  href="/fines"
-                  className="flex items-center gap-1 text-xs font-medium text-[var(--brand-primary)] hover:underline"
+                  href="/books/search"
+                  className="mt-4 inline-flex items-center gap-2 rounded-xl bg-[#1e3a5f] text-white px-4 py-2 text-xs font-medium hover:bg-[#162d4a] transition-colors"
                 >
-                  Details <ChevronRight className="h-3 w-3" />
+                  <Search className="w-3.5 h-3.5" /> Browse Books
                 </Link>
               </div>
+            ) : (
+              <div className="divide-y divide-[#f0ece4]">
+                {issuedBooks.map((issue) => {
+                  const daysLeft = daysUntilDue(issue.due_date);
+                  return (
+                    <motion.div
+                      key={issue.id}
+                      whileHover={{ backgroundColor: "#faf8f4" }}
+                      transition={{ duration: 0.15 }}
+                      className="flex flex-col sm:flex-row sm:items-center gap-3 px-6 py-4"
+                    >
+                      {/* Book icon */}
+                      <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-[#1e3a5f]/8 flex items-center justify-center">
+                        <BookOpen className="w-4 h-4 text-[#1e3a5f]" />
+                      </div>
 
-              {fines.length === 0 ? (
-                <div className="flex flex-col items-center justify-center gap-2 py-8 text-center">
-                  <CheckCircle className="h-10 w-10 text-emerald-200" />
-                  <p className="text-sm font-medium text-emerald-600">
-                    No fines on record
-                  </p>
-                  <p className="text-xs text-gray-400">
-                    Keep returning books on time!
-                  </p>
+                      {/* Book info */}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-[#1a2a3a] truncate">
+                          {issue.book?.title ?? "Unknown Book"}
+                        </p>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          {issue.book?.author ?? ""}
+                          {issue.book?.category ? ` · ${issue.book.category}` : ""}
+                          {issue.book?.shelf_location ? ` · Shelf: ${issue.book.shelf_location}` : ""}
+                        </p>
+                      </div>
+
+                      {/* Dates */}
+                      <div className="flex flex-col items-start sm:items-end gap-1 text-xs text-slate-400 flex-shrink-0">
+                        <div className="flex items-center gap-1">
+                          <Calendar className="w-3 h-3" />
+                          <span>Issued: {formatDate(issue.issue_date)}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          <span>Due: {formatDate(issue.due_date)}</span>
+                        </div>
+                      </div>
+
+                      {/* Badges */}
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <span
+                          className={cn(
+                            "inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium",
+                            getStatusColor(issue.status)
+                          )}
+                        >
+                          {getStatusIcon(issue.status)}
+                          {issue.status.charAt(0).toUpperCase() + issue.status.slice(1)}
+                        </span>
+                        {getDueBadge(daysLeft, issue.status)}
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </Reveal>
+
+        {/* ── Bottom Row: Activity + Fine Summary ─────────────────────────────── */}
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+
+          {/* Recent Activity */}
+          <Reveal delay={0.1} className="lg:col-span-3">
+            <div className="bg-white rounded-2xl border border-[#d6cfc2] shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_-8px_rgba(0,0,0,0.10)] overflow-hidden h-full">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-[#ede8df]">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-[#c8a96e]/15 flex items-center justify-center">
+                    <Activity className="w-4 h-4 text-[#c8a96e]" />
+                  </div>
+                  <div>
+                    <h2 className="text-sm font-semibold text-[#1a2a3a]">Recent Activity</h2>
+                    <p className="text-xs text-slate-400">Your latest library interactions</p>
+                  </div>
+                </div>
+              </div>
+
+              {activity.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <Activity className="w-8 h-8 text-slate-200 mb-3" />
+                  <p className="text-sm text-slate-400">No recent activity</p>
                 </div>
               ) : (
-                <>
-                  <div className="flex items-center justify-center">
-                    <DonutChart
-                      paid={paidFines.length}
-                      pending={pendingFines.length}
-                      waived={waivedFines.length}
-                    />
-                  </div>
-                  <div className="mt-4 space-y-2">
-                    {[
-                      {
-                        label: "Paid",
-                        count: paidFines.length,
-                        color: "bg-emerald-500",
-                        amount: paidFines.reduce(
-                          (s, f) => s + Number(f.total_amount),
-                          0
-                        ),
-                      },
-                      {
-                        label: "Pending",
-                        count: pendingFines.length,
-                        color: "bg-red-500",
-                        amount: totalPendingAmount,
-                      },
-                      {
-                        label: "Waived",
-                        count: waivedFines.length,
-                        color: "bg-[var(--brand-gold)]",
-                        amount: waivedFines.reduce(
-                          (s, f) => s + Number(f.total_amount),
-                          0
-                        ),
-                      },
-                    ].map((row) => (
-                      <div
-                        key={row.label}
-                        className="flex items-center justify-between text-sm"
-                      >
-                        <div className="flex items-center gap-2">
-                          <span
+                <div className="px-6 py-4">
+                  <div className="relative">
+                    {/* Timeline line */}
+                    <div className="absolute left-3.5 top-0 bottom-0 w-px bg-[#ede8df]" />
+
+                    <div className="space-y-5">
+                      {activity.map((log, idx) => (
+                        <div key={log.id} className="relative flex gap-4 pl-10">
+                          {/* Timeline dot */}
+                          <div
                             className={cn(
-                              "h-2.5 w-2.5 rounded-full",
-                              row.color
+                              "absolute left-0 top-1 w-7 h-7 rounded-full border-2 border-white flex items-center justify-center shadow-sm",
+                              idx === 0 ? "bg-[#1e3a5f]" : "bg-white border-[#ede8df]"
                             )}
-                          />
-                          <span className="text-gray-600">{row.label}</span>
-                          <span className="text-xs text-gray-400">
-                            ({row.count})
-                          </span>
+                          >
+                            <span className={idx === 0 ? "text-white" : ""}>
+                              {activityIcon(log.action_type)}
+                            </span>
+                          </div>
+
+                          <div className="flex-1 min-w-0 pb-1">
+                            <p className="text-sm font-medium text-[#1a2a3a] leading-snug">
+                              {log.description ?? log.action_type.replace(/_/g, " ")}
+                            </p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-xs text-slate-400">{timeAgo(log.created_at)}</span>
+                              <span className="w-1 h-1 rounded-full bg-slate-200" />
+                              <span className="text-xs text-slate-400 capitalize">{log.entity_type}</span>
+                            </div>
+                          </div>
                         </div>
-                        <span className="font-semibold text-gray-700">
-                          PKR {row.amount.toFixed(0)}
-                        </span>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                  {totalPendingAmount > 0 && (
-                    <Link
-                      href="/fines"
-                      className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-red-500 px-4 py-2.5 text-sm font-semibold text-white transition-all duration-200 hover:bg-red-600"
-                    >
-                      Pay PKR {totalPendingAmount.toFixed(0)}
-                      <ArrowRight className="h-4 w-4" />
-                    </Link>
-                  )}
-                </>
+                </div>
               )}
             </div>
           </Reveal>
-        </div>
 
-        {/* Transaction Timeline + Quick Actions */}
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
-          {/* Recent Transaction Timeline */}
-          <Reveal className="xl:col-span-2">
-            <div className="rounded-2xl border border-gray-100 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04),0_8px_20px_-8px_rgba(0,0,0,0.08)]">
-              <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
-                <h2 className="text-base font-semibold text-gray-800">
-                  Recent Activity
-                </h2>
-                <span className="rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-500">
-                  Last 10 events
-                </span>
+          {/* Fine Summary */}
+          <Reveal delay={0.12} className="lg:col-span-2">
+            <div className="bg-white rounded-2xl border border-[#d6cfc2] shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_-8px_rgba(0,0,0,0.10)] overflow-hidden h-full">
+              <div className="flex items-center gap-2.5 px-6 py-4 border-b border-[#ede8df]">
+                <div className="w-8 h-8 rounded-lg bg-[#e74c3c]/10 flex items-center justify-center">
+                  <DollarSign className="w-4 h-4 text-[#e74c3c]" />
+                </div>
+                <div>
+                  <h2 className="text-sm font-semibold text-[#1a2a3a]">Fine Summary</h2>
+                  <p className="text-xs text-slate-400">{fines.length} total records</p>
+                </div>
               </div>
-              <div className="px-5 py-4">
-                {activityLogs.length === 0 ? (
-                  <div className="flex flex-col items-center justify-center gap-2 py-8 text-center">
-                    <TrendingUp className="h-10 w-10 text-gray-200" />
-                    <p className="text-sm text-gray-400">
-                      No recent activity found
-                    </p>
+
+              <div className="px-6 py-5">
+                {fines.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-8 text-center">
+                    <CheckCircle className="w-8 h-8 text-emerald-400 mb-2" />
+                    <p className="text-sm font-medium text-emerald-600">No fines on record</p>
+                    <p className="text-xs text-slate-400 mt-1">Keep returning books on time!</p>
                   </div>
                 ) : (
-                  <ol className="relative border-l border-gray-100 pl-5">
-                    {activityLogs.map((log, idx) => (
-                      <li
-                        key={log.id}
-                        className={cn(
-                          "relative pb-5",
-                          idx === activityLogs.length - 1 && "pb-0"
-                        )}
-                      >
-                        <span className="absolute -left-[22px] flex h-8 w-8 items-center justify-center rounded-full border border-gray-100 bg-white shadow-sm">
-                          <ActionIcon type={log.action_type} />
-                        </span>
-                        <div className="ml-2">
-                          <p className="text-sm font-medium text-gray-800">
-                            {log.description ??
-                              log.action_type
-                                .replace(/_/g, " ")
-                                .replace(/\b\w/g, (c) => c.toUpperCase())}
-                          </p>
-                          <p className="mt-0.5 text-xs text-gray-400">
-                            {formatDate(log.created_at)}
-                          </p>
+                  <>
+                    {/* Donut */}
+                    <div className="flex items-center justify-center mb-5">
+                      <div className="relative">
+                        <DonutChart
+                          paid={paidFines}
+                          pending={pendingFines.length}
+                          waived={waivedFines}
+                        />
+                        <div className="absolute inset-0 flex flex-col items-center justify-center">
+                          <span className="text-lg font-bold text-[#1a2a3a]">{fines.length}</span>
+                          <span className="text-[10px] text-slate-400">total</span>
                         </div>
-                      </li>
-                    ))}
-                  </ol>
+                      </div>
+                    </div>
+
+                    {/* Legend */}
+                    <div className="space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                          <span className="text-xs text-slate-600">Paid</span>
+                        </div>
+                        <span className="text-xs font-semibold text-[#1a2a3a]">{paidFines}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+                          <span className="text-xs text-slate-600">Pending</span>
+                        </div>
+                        <span className="text-xs font-semibold text-[#e74c3c]">{pendingFines.length}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
+                          <span className="text-xs text-slate-600">Waived</span>
+                        </div>
+                        <span className="text-xs font-semibold text-[#1a2a3a]">{waivedFines}</span>
+                      </div>
+                    </div>
+
+                    {/* Pending amount callout */}
+                    {totalPendingAmount > 0 && (
+                      <div className="mt-4 rounded-xl bg-red-50 border border-red-100 px-4 py-3">
+                        <p className="text-xs text-red-600 font-medium">Outstanding Balance</p>
+                        <p className="text-xl font-bold text-red-700 mt-0.5">PKR {totalPendingAmount}</p>
+                      </div>
+                    )}
+
+                    <Link
+                      href="/fines"
+                      className="mt-4 flex items-center justify-center gap-2 w-full rounded-xl border border-[#d6cfc2] bg-[#f5f0e8] text-[#1e3a5f] text-xs font-medium py-2.5 hover:bg-[#ede8df] transition-colors"
+                    >
+                      View Fine Details <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
+                  </>
                 )}
               </div>
             </div>
           </Reveal>
-
-          {/* Quick Actions */}
-          <Reveal>
-            <div className="rounded-2xl border border-gray-100 bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.04),0_8px_20px_-8px_rgba(0,0,0,0.08)]">
-              <h2 className="mb-4 text-base font-semibold text-gray-800">
-                Quick Actions
-              </h2>
-              <div className="grid grid-cols-2 gap-3">
-                {quickActions.map((action) => (
-                  <motion.div
-                    key={action.label}
-                    whileHover={{ scale: 1.03 }}
-                    whileTap={{ scale: 0.97 }}
-                    transition={{ duration: 0.15 }}
-                  >
-                    <Link
-                      href={action.href}
-                      className="flex flex-col items-center gap-2.5 rounded-xl border border-gray-100 p-4 text-center transition-all duration-200 hover:border-[var(--brand-primary)]/20 hover:shadow-md"
-                    >
-                      <div
-                        className={cn(
-                          "flex h-10 w-10 items-center justify-center rounded-xl text-white",
-                          action.color
-                        )}
-                      >
-                        <action.icon className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <p className="text-xs font-semibold text-gray-700">
-                          {action.label}
-                        </p>
-                        <p className="mt-0.5 text-[10px] leading-tight text-gray-400">
-                          {action.desc}
-                        </p>
-                      </div>
-                    </Link>
-                  </motion.div>
-                ))}
-              </div>
-
-              {/* Fine rate info */}
-              <div className="mt-4 rounded-xl bg-amber-50 p-3">
-                <div className="flex items-start gap-2">
-                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
-                  <div>
-                    <p className="text-xs font-semibold text-amber-700">
-                      Fine Policy
-                    </p>
-                    <p className="mt-0.5 text-[11px] leading-relaxed text-amber-600">
-                      PKR {FINE_RATE} per day for overdue books. Return on time
-                      to avoid charges.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </Reveal>
         </div>
-      </main>
+      </div>
     </div>
   );
 }

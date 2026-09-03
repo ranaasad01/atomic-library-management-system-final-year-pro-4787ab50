@@ -3,27 +3,19 @@
 import { useTranslations } from "next-intl";
 import { motion } from "framer-motion";
 import { Reveal } from "@/components/Reveal";
-import { fadeInUp, staggerContainer, scaleIn } from "@/lib/motion";
-import { BookOpen, Users, ArrowRight, CheckCircle, BarChart3, Shield, Clock, Search, AlertCircle, Star, BookMarked, UserCheck, Activity, ChevronRight } from 'lucide-react';
+import { fadeInUp, staggerContainer, scaleIn, fadeInRight } from "@/lib/motion";
+import { BookOpen, Users, ArrowRight, CheckCircle, BarChart3, Shield, Clock, Search, AlertCircle, Star, BookMarked, Activity, Sparkles, TrendingUp } from 'lucide-react';
 import Link from "next/link";
-import { cn } from "@/lib/utils";
-import { FINE_RATE_PER_DAY, DEFAULT_ISSUE_DAYS } from "@/lib/data";
-type APP_NAME = any;
-const APP_NAME: any = [];
-type APP_TAGLINE = any;
-const APP_TAGLINE: any = [];
-type APP_BRAND = any;
-const APP_BRAND: any = [];
+import { FINE_RATE_PER_DAY, DEFAULT_ISSUE_DAYS, BRAND } from "@/lib/data";
 
-// ─── Inline constants ──────────────────────────────────────────────────────────
 const FINE_RATE = FINE_RATE_PER_DAY;
 const LOAN_DAYS = DEFAULT_ISSUE_DAYS;
 
 const STATS = [
-  { value: "5,000+", label: "Books Catalogued" },
-  { value: "1,200+", label: "Active Members" },
-  { value: "98%", label: "Return Rate" },
-  { value: `PKR ${FINE_RATE}/day`, label: "Overdue Fine Rate" },
+  { value: "5,000+", label: "Books Catalogued", icon: BookOpen },
+  { value: "1,200+", label: "Active Members", icon: Users },
+  { value: "98%", label: "Return Rate", icon: TrendingUp },
+  { value: `PKR ${FINE_RATE}/day`, label: "Overdue Fine Rate", icon: AlertCircle },
 ];
 
 const FEATURES = [
@@ -32,36 +24,40 @@ const FEATURES = [
     title: "Complete Book Catalog",
     description:
       "Manage your entire library inventory with ISBN tracking, category filters, shelf locations, and real-time availability status.",
+    color: "#1e3a5f",
   },
   {
     icon: Users,
     title: "Member Management",
     description:
       "Add, edit, and manage library members with membership numbers, contact details, and role-based access control.",
+    color: "#c8a96e",
   },
   {
     icon: Activity,
     title: "Issue & Return Workflow",
-    description:
-      `Track every book transaction with a ${LOAN_DAYS}-day default loan period, automated overdue detection, and full history logs.`,
+    description: `Track every book transaction with a ${LOAN_DAYS}-day default loan period, automated overdue detection, and full history logs.`,
+    color: "#27ae60",
   },
   {
     icon: AlertCircle,
     title: "Fine Tracking",
-    description:
-      `Automatically calculate overdue fines at PKR ${FINE_RATE} per day. Mark fines as paid or waived with full audit trails.`,
+    description: `Automatically calculate overdue fines at PKR ${FINE_RATE} per day. Mark fines as paid or waived with full audit trails.`,
+    color: "#e74c3c",
   },
   {
     icon: Shield,
     title: "JWT Authentication",
     description:
       "Secure role-based access control separates member and admin capabilities, protecting sensitive library operations.",
+    color: "#2980b9",
   },
   {
     icon: BarChart3,
     title: "Admin Dashboard",
     description:
       "Get a bird's-eye view of library activity — active issues, pending fines, recent transactions, and member statistics.",
+    color: "#8e44ad",
   },
 ];
 
@@ -71,406 +67,704 @@ const HOW_IT_WORKS = [
     title: "Sign In Securely",
     description:
       "Members and admins authenticate with JWT-secured credentials. Role-based access ensures each user sees only what they need.",
+    icon: Shield,
   },
   {
     step: "02",
     title: "Search & Discover Books",
     description:
       "Browse the full catalog by title, author, ISBN, or category. Real-time availability shows exactly how many copies are on the shelf.",
+    icon: Search,
   },
   {
     step: "03",
     title: "Issue & Return",
-    description:
-      `Admins issue books to members in seconds. The system sets a ${LOAN_DAYS}-day due date, tracks returns, and flags overdue items automatically.`,
+    description: `Admins issue books to members in seconds. The system sets a ${LOAN_DAYS}-day due date, tracks returns, and flags overdue items automatically.`,
+    icon: BookMarked,
   },
   {
     step: "04",
     title: "Manage Fines",
-    description:
-      "Overdue fines are calculated automatically. Admins can mark them paid or waive them with a reason — every action is logged.",
+    description: `Overdue fines are calculated at PKR ${FINE_RATE}/day. Admins can mark fines as paid or waived with reason tracking.`,
+    icon: CheckCircle,
   },
-];
-
-const TESTIMONIALS = [
-  {
-    name: "Dr. Ayesha Malik",
-    role: "Head Librarian, NCBA&E",
-    quote:
-      "This system transformed how we manage our collection. Issue and return workflows that used to take minutes now happen in seconds.",
-    initials: "AM",
-  },
-  {
-    name: "Usman Tariq",
-    role: "Library Member",
-    quote:
-      "I can check book availability before visiting the library. The fine tracking keeps me on top of my due dates — no surprises.",
-    initials: "UT",
-  },
-  {
-    name: "Prof. Sana Riaz",
-    role: "Faculty, Business Administration",
-    quote:
-      "The admin dashboard gives us a clear picture of library usage. We can see which books are most in demand and plan acquisitions accordingly.",
-    initials: "SR",
-  },
-];
-
-const ADMIN_CAPABILITIES = [
-  "Add, edit, and remove books from the catalog",
-  "Manage member accounts and membership status",
-  "Issue books and process returns on behalf of members",
-  "View and manage all outstanding fines",
-  "Access full transaction history and audit logs",
-  "Monitor library activity through the admin dashboard",
 ];
 
 export default function HomePage() {
-  const t = useTranslations();
-
   return (
-    <main className="overflow-x-hidden">
-      {/* ── Hero ─────────────────────────────────────────────────────────── */}
-      <Reveal>
-        <section className="relative min-h-[88vh] flex items-center bg-[var(--brand-dark)] overflow-hidden">
-          {/* Background texture */}
+    <div className="min-h-screen bg-[var(--background)]">
+      {/* ── HERO ─────────────────────────────────────────────────────────── */}
+      <section
+        className="relative overflow-hidden"
+        style={{
+          background:
+            "linear-gradient(135deg, #0f1f33 0%, #1e3a5f 40%, #2a4f7c 100%)",
+        }}
+      >
+        {/* Decorative background elements */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div
-            className="absolute inset-0 opacity-[0.04]"
+            className="absolute -top-40 -right-40 w-96 h-96 rounded-full opacity-10"
+            style={{
+              background: "radial-gradient(circle, #c8a96e, transparent)",
+            }}
+          />
+          <div
+            className="absolute -bottom-20 -left-20 w-80 h-80 rounded-full opacity-10"
+            style={{
+              background: "radial-gradient(circle, #c8a96e, transparent)",
+            }}
+          />
+          <div
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full opacity-5"
+            style={{
+              background: "radial-gradient(circle, #ffffff, transparent)",
+            }}
+          />
+          {/* Subtle grid pattern */}
+          <div
+            className="absolute inset-0"
             style={{
               backgroundImage:
-                "radial-gradient(circle at 1px 1px, var(--brand-gold) 1px, transparent 0)",
-              backgroundSize: "32px 32px",
-            }} />
-          {/* Gradient glow */}
-          <div className="absolute top-0 right-0 w-[600px] h-[600px] rounded-full bg-[var(--brand-gold)]/10 blur-[120px] pointer-events-none" />
-          <div className="absolute bottom-0 left-0 w-[400px] h-[400px] rounded-full bg-[var(--brand-gold)]/5 blur-[100px] pointer-events-none" />
+                "linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)",
+              backgroundSize: "60px 60px",
+            }}
+          />
+        </div>
 
-          <div className="relative z-10 max-w-7xl mx-auto px-6 lg:px-12 py-24 grid lg:grid-cols-2 gap-16 items-center">
-            {/* Left: copy */}
-            <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="space-y-8">
-              <motion.div variants={fadeInUp}>
-                <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-[var(--brand-gold)]/30 bg-[var(--brand-gold)]/10 text-[var(--brand-gold)] text-xs font-semibold tracking-wide uppercase">
-                  <BookMarked className="h-3.5 w-3.5" aria-hidden="true" />
-                  {t("hero.badge")}
+        <div className="container-lms relative z-10 py-24 lg:py-32">
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
+            {/* Left: Text */}
+            <motion.div
+              variants={staggerContainer}
+              initial="hidden"
+              animate="visible"
+              className="text-white"
+            >
+              {/* Badge */}
+              <motion.div variants={fadeInUp} className="mb-6">
+                <span
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold"
+                  style={{
+                    background: "rgba(200,169,110,0.2)",
+                    border: "1px solid rgba(200,169,110,0.4)",
+                    color: "#e8c98e",
+                  }}
+                >
+                  <Sparkles className="w-4 h-4" />
+                  Final Year Project — NCBA&amp;E, Lahore
                 </span>
               </motion.div>
 
+              {/* Headline */}
               <motion.h1
                 variants={fadeInUp}
-                className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white leading-tight tracking-tight text-balance"
-                style={{
-                  color: "#84cc16"
-                }}>
-                {t("hero.headline1")}{" "}
-                <span className="text-[var(--brand-gold)]">{t("hero.headline2")}</span>{" "}
-                {t("hero.headline3")}
+                className="text-5xl lg:text-6xl font-bold leading-tight mb-6 tracking-tight"
+              >
+                Your Library,{" "}
+                <span
+                  style={{
+                    background:
+                      "linear-gradient(135deg, #c8a96e, #e8c98e)",
+                    WebkitBackgroundClip: "text",
+                    WebkitTextFillColor: "transparent",
+                    backgroundClip: "text",
+                  }}
+                >
+                  Digitally
+                </span>
+                <br />
+                Organized
               </motion.h1>
 
-              <motion.p variants={fadeInUp} className="text-lg text-white/70 leading-relaxed max-w-lg text-pretty">
-                {t("hero.subheadline")}
+              <motion.p
+                variants={fadeInUp}
+                className="text-lg text-white/70 leading-relaxed mb-8 max-w-lg"
+              >
+                A modern web-based Library Management System built with the MERN
+                stack — delivering speed, reliability, and ease of use for
+                librarians and patrons alike.
               </motion.p>
 
-              <motion.div variants={fadeInUp} className="flex flex-wrap gap-4">
-                <Link href="/login" className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[var(--brand-gold)] text-[var(--brand-dark)] font-semibold text-sm hover:bg-[var(--brand-gold)]/90 transition-all duration-300 shadow-[0_4px_24px_rgba(200,169,110,0.35)] hover:shadow-[0_6px_32px_rgba(200,169,110,0.5)] hover:-translate-y-0.5">
-                  {t("hero.cta_primary")}
-                  <ArrowRight className="h-4 w-4" aria-hidden="true" />
-                </Link>
-                <Link href="/books/search" className="inline-flex items-center gap-2 px-6 py-3 rounded-xl border border-white/20 text-white font-semibold text-sm hover:bg-white/10 hover:border-white/40 transition-all duration-300">
-                  <Search className="h-4 w-4" aria-hidden="true" />
-                  {t("hero.cta_secondary")}
-                </Link>
+              {/* Trust badges */}
+              <motion.div
+                variants={fadeInUp}
+                className="flex flex-wrap gap-3 mb-10"
+              >
+                {["NCBA&E Approved", "Production Ready", "MERN Stack"].map(
+                  (badge) => (
+                    <span
+                      key={badge}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium"
+                      style={{
+                        background: "rgba(255,255,255,0.1)",
+                        border: "1px solid rgba(255,255,255,0.2)",
+                        color: "rgba(255,255,255,0.85)",
+                      }}
+                    >
+                      <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
+                      {badge}
+                    </span>
+                  )
+                )}
               </motion.div>
 
-              <motion.div variants={fadeInUp} className="flex items-center gap-6 pt-2">
-                {[
-                  t("hero.trust1"),
-                  t("hero.trust2"),
-                  t("hero.trust3"),
-                ].map((item) => (<div key={item} className="flex items-center gap-1.5 text-white/60 text-xs">
-                  <CheckCircle className="h-3.5 w-3.5 text-[var(--brand-gold)]" aria-hidden="true" />
-                  {item}
-                </div>))}
+              {/* CTAs */}
+              <motion.div
+                variants={fadeInUp}
+                className="flex flex-wrap gap-4"
+              >
+                <Link
+                  href="/login"
+                  className="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl font-semibold text-[#1a2a3a] transition-all duration-200 hover:scale-105 hover:shadow-xl"
+                  style={{
+                    background:
+                      "linear-gradient(135deg, #c8a96e, #e8c98e)",
+                    boxShadow: "0 4px 20px rgba(200,169,110,0.4)",
+                  }}
+                >
+                  Get Started
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+                <Link
+                  href="/books/search"
+                  className="inline-flex items-center gap-2 px-7 py-3.5 rounded-xl font-semibold text-white transition-all duration-200 hover:scale-105"
+                  style={{
+                    background: "rgba(255,255,255,0.1)",
+                    border: "1px solid rgba(255,255,255,0.25)",
+                    backdropFilter: "blur(8px)",
+                  }}
+                >
+                  <Search className="w-4 h-4" />
+                  Browse Books
+                </Link>
               </motion.div>
             </motion.div>
 
-            {/* Right: mock dashboard card */}
-            <motion.div variants={scaleIn} initial="hidden" animate="visible" className="hidden lg:block">
-              <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm p-6 shadow-[0_8px_48px_rgba(0,0,0,0.4)] space-y-5">
-                {/* Header */}
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-white/50 text-xs uppercase tracking-widest">{t("hero.card_title")}</p>
-                    <p className="text-white font-semibold mt-0.5">{t("hero.card_subtitle")}</p>
+            {/* Right: Floating card UI mockup */}
+            <motion.div
+              variants={fadeInRight}
+              initial="hidden"
+              animate="visible"
+              className="hidden lg:block relative"
+            >
+              {/* Main card */}
+              <div
+                className="rounded-2xl p-6 shadow-2xl"
+                style={{
+                  background: "rgba(255,255,255,0.08)",
+                  border: "1px solid rgba(255,255,255,0.15)",
+                  backdropFilter: "blur(20px)",
+                }}
+              >
+                <div className="flex items-center justify-between mb-5">
+                  <div className="flex items-center gap-2">
+                    <div
+                      className="w-8 h-8 rounded-lg flex items-center justify-center"
+                      style={{
+                        background:
+                          "linear-gradient(135deg, #c8a96e, #b8944f)",
+                      }}
+                    >
+                      <BookOpen className="w-4 h-4 text-white" />
+                    </div>
+                    <span className="text-white font-semibold text-sm">
+                      Library Dashboard
+                    </span>
                   </div>
-                  <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-400 text-xs font-medium">
-                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                    {t("hero.card_live")}
+                  <span
+                    className="flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full"
+                    style={{
+                      background: "rgba(39,174,96,0.2)",
+                      color: "#4ade80",
+                    }}
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    Live
                   </span>
                 </div>
 
-                {/* Stat row */}
-                <div className="grid grid-cols-3 gap-3">
+                {/* Stats row */}
+                <div className="grid grid-cols-3 gap-3 mb-5">
                   {[
-                    { label: t("hero.card_stat1_label"), value: "142", color: "text-[var(--brand-gold)]" },
-                    { label: t("hero.card_stat2_label"), value: "18", color: "text-red-400" },
-                    { label: t("hero.card_stat3_label"), value: "PKR 2,340", color: "text-amber-400" },
-                  ].map((s) => (<div key={s.label} className="rounded-xl bg-white/5 border border-white/8 p-3 text-center">
-                    <p className={cn("text-xl font-bold", s.color)}>{s.value}</p>
-                    <p className="text-white/50 text-[10px] mt-0.5 leading-tight">{s.label}</p>
-                  </div>))}
+                    { label: "Books", value: "5,240", color: "#c8a96e" },
+                    { label: "Members", value: "1,180", color: "#4a90d9" },
+                    { label: "Active", value: "342", color: "#27ae60" },
+                  ].map((s) => (
+                    <div
+                      key={s.label}
+                      className="rounded-xl p-3 text-center"
+                      style={{ background: "rgba(255,255,255,0.06)" }}
+                    >
+                      <div
+                        className="text-xl font-bold"
+                        style={{ color: s.color }}
+                      >
+                        {s.value}
+                      </div>
+                      <div className="text-xs text-white/50 mt-0.5">
+                        {s.label}
+                      </div>
+                    </div>
+                  ))}
                 </div>
 
                 {/* Recent activity */}
-                <div className="space-y-2">
-                  <p className="text-white/40 text-[10px] uppercase tracking-widest">{t("hero.card_activity_label")}</p>
+                <div className="space-y-2.5">
+                  <p className="text-xs font-semibold text-white/40 uppercase tracking-wider mb-3">
+                    Recent Activity
+                  </p>
                   {[
-                    { action: t("hero.activity1_action"), book: t("hero.activity1_book"), time: "2m ago", type: "issue" },
-                    { action: t("hero.activity2_action"), book: t("hero.activity2_book"), time: "15m ago", type: "return" },
-                    { action: t("hero.activity3_action"), book: t("hero.activity3_book"), time: "1h ago", type: "fine" },
+                    {
+                      action: "Issued",
+                      book: "Introduction to Algorithms",
+                      time: "2m ago",
+                      color: "#4a90d9",
+                    },
+                    {
+                      action: "Returned",
+                      book: "Database System Concepts",
+                      time: "15m ago",
+                      color: "#27ae60",
+                    },
+                    {
+                      action: "Fine Paid",
+                      book: "Clean Code",
+                      time: "1h ago",
+                      color: "#c8a96e",
+                    },
                   ].map((item, i) => (
-                    <div key={i} className="flex items-center justify-between rounded-lg bg-white/5 px-3 py-2">
-                      <div className="flex items-center gap-2.5">
+                    <div
+                      key={i}
+                      className="flex items-center gap-3 rounded-lg px-3 py-2.5"
+                      style={{ background: "rgba(255,255,255,0.05)" }}
+                    >
+                      <span
+                        className="w-2 h-2 rounded-full flex-shrink-0"
+                        style={{ background: item.color }}
+                      />
+                      <div className="flex-1 min-w-0">
                         <span
-                          className={cn(
-                            "h-2 w-2 rounded-full flex-shrink-0",
-                            item.type === "issue"
-                              ? "bg-[var(--brand-gold)]"
-                              : item.type === "return"
-                              ? "bg-emerald-400"
-                              : "bg-red-400"
-                          )} />
-                        <div>
-                          <p className="text-white/80 text-xs font-medium">{item.action}</p>
-                          <p className="text-white/40 text-[10px]">{item.book}</p>
-                        </div>
+                          className="text-xs font-medium"
+                          style={{ color: item.color }}
+                        >
+                          {item.action}
+                        </span>
+                        <span className="text-xs text-white/60 ml-1.5 truncate">
+                          {item.book}
+                        </span>
                       </div>
-                      <span className="text-white/30 text-[10px]">{item.time}</span>
+                      <span className="text-xs text-white/30 flex-shrink-0">
+                        {item.time}
+                      </span>
                     </div>
                   ))}
                 </div>
               </div>
+
+              {/* Floating badge — books available */}
+              <motion.div
+                animate={{ y: [0, -8, 0] }}
+                transition={{
+                  duration: 3,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
+                className="absolute -top-6 -right-6 rounded-xl px-4 py-3 shadow-xl"
+                style={{
+                  background: "linear-gradient(135deg, #c8a96e, #b8944f)",
+                  color: "#1a2a3a",
+                }}
+              >
+                <div className="text-xs font-semibold">Books Available</div>
+                <div className="text-2xl font-bold">4,892</div>
+              </motion.div>
+
+              {/* Floating badge — return rate */}
+              <motion.div
+                animate={{ y: [0, 8, 0] }}
+                transition={{
+                  duration: 3.5,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                  delay: 0.5,
+                }}
+                className="absolute -bottom-6 -left-6 rounded-xl px-4 py-3 shadow-xl"
+                style={{
+                  background: "rgba(255,255,255,0.12)",
+                  border: "1px solid rgba(255,255,255,0.2)",
+                  backdropFilter: "blur(12px)",
+                  color: "white",
+                }}
+              >
+                <div className="text-xs text-white/60">Return Rate</div>
+                <div className="text-2xl font-bold text-emerald-400">98%</div>
+              </motion.div>
             </motion.div>
           </div>
-        </section>
-      </Reveal>
-      {/* ── Stats Bar ────────────────────────────────────────────────────── */}
-      <Reveal>
-        <section className="bg-[var(--brand-cream)] border-y border-[var(--brand-gold)]/20">
-          <div className="max-w-7xl mx-auto px-6 lg:px-12 py-12">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-8">
-              {STATS.map((stat, i) => (
-                <motion.div key={stat.label} variants={fadeInUp} initial="hidden" whileInView="visible" viewport={{ once: true }} transition={{ delay: i * 0.08 }} className="text-center">
-                  <p className="text-3xl font-bold text-[var(--brand-dark)] tracking-tight">
+        </div>
+
+        {/* Wave divider */}
+        <div className="absolute bottom-0 left-0 right-0">
+          <svg
+            viewBox="0 0 1440 60"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            className="w-full"
+          >
+            <path
+              d="M0 60L1440 60L1440 20C1200 60 960 0 720 20C480 40 240 0 0 20L0 60Z"
+              fill="#f5f0e8"
+            />
+          </svg>
+        </div>
+      </section>
+
+      {/* ── STATS BAR ────────────────────────────────────────────────────── */}
+      <section className="py-16 bg-[var(--background)]">
+        <div className="container-lms">
+          <motion.div
+            variants={staggerContainer}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            className="grid grid-cols-2 lg:grid-cols-4 gap-6"
+          >
+            {STATS.map((stat) => (
+              <motion.div
+                key={stat.label}
+                variants={scaleIn}
+                className="relative rounded-2xl p-6 text-center group cursor-default overflow-hidden"
+                style={{
+                  background: "white",
+                  border: "1px solid var(--border)",
+                  boxShadow: "var(--shadow-sm)",
+                }}
+                whileHover={{
+                  y: -4,
+                  boxShadow: "0 12px 40px -8px rgba(30,58,95,0.2)",
+                }}
+                transition={{ duration: 0.2 }}
+              >
+                <div
+                  className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                  style={{
+                    background:
+                      "linear-gradient(135deg, rgba(30,58,95,0.03), rgba(200,169,110,0.05))",
+                  }}
+                />
+                <div className="relative z-10">
+                  <div
+                    className="w-12 h-12 rounded-2xl mx-auto mb-4 flex items-center justify-center"
+                    style={{
+                      background:
+                        "linear-gradient(135deg, rgba(30,58,95,0.1), rgba(200,169,110,0.15))",
+                    }}
+                  >
+                    <stat.icon
+                      className="w-6 h-6"
+                      style={{ color: "#1e3a5f" }}
+                    />
+                  </div>
+                  <div
+                    className="text-3xl font-bold mb-1"
+                    style={{ color: "#1e3a5f" }}
+                  >
                     {stat.value}
+                  </div>
+                  <div
+                    className="text-sm font-medium"
+                    style={{ color: "#5a6a7a" }}
+                  >
+                    {stat.label}
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ── FEATURES ─────────────────────────────────────────────────────── */}
+      <section
+        className="py-20"
+        style={{
+          background: "linear-gradient(180deg, #f5f0e8 0%, #ede8df 100%)",
+        }}
+      >
+        <div className="container-lms">
+          <Reveal className="text-center mb-14">
+            <span
+              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold mb-4"
+              style={{
+                background: "rgba(200,169,110,0.15)",
+                border: "1px solid rgba(200,169,110,0.35)",
+                color: "#b8944f",
+              }}
+            >
+              <Star className="w-3.5 h-3.5" />
+              Core Features
+            </span>
+            <h2
+              className="text-4xl font-bold mb-4 tracking-tight"
+              style={{ color: "#1e3a5f" }}
+            >
+              Everything You Need to Run a Modern Library
+            </h2>
+            <p
+              className="text-lg max-w-2xl mx-auto leading-relaxed"
+              style={{ color: "#5a6a7a" }}
+            >
+              From book cataloging to fine management — all in one integrated
+              platform built for academic institutions.
+            </p>
+          </Reveal>
+
+          <motion.div
+            variants={staggerContainer}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            className="grid md:grid-cols-2 lg:grid-cols-3 gap-6"
+          >
+            {FEATURES.map((feature) => (
+              <motion.div
+                key={feature.title}
+                variants={fadeInUp}
+                className="group rounded-2xl p-6 bg-white border border-[var(--border)] transition-all duration-300 hover:shadow-xl cursor-default relative overflow-hidden"
+                whileHover={{ y: -4 }}
+              >
+                {/* Accent top line */}
+                <div
+                  className="absolute top-0 left-0 right-0 h-0.5 rounded-t-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                  style={{
+                    background: `linear-gradient(90deg, ${feature.color}, transparent)`,
+                  }}
+                />
+                <div
+                  className="w-12 h-12 rounded-2xl mb-5 flex items-center justify-center transition-transform duration-300 group-hover:scale-110"
+                  style={{ background: `${feature.color}18` }}
+                >
+                  <feature.icon
+                    className="w-6 h-6"
+                    style={{ color: feature.color }}
+                  />
+                </div>
+                <h3
+                  className="text-lg font-bold mb-2"
+                  style={{ color: "#1e3a5f" }}
+                >
+                  {feature.title}
+                </h3>
+                <p
+                  className="text-sm leading-relaxed"
+                  style={{ color: "#5a6a7a" }}
+                >
+                  {feature.description}
+                </p>
+              </motion.div>
+            ))}
+          </motion.div>
+        </div>
+      </section>
+
+      {/* ── HOW IT WORKS ─────────────────────────────────────────────────── */}
+      <section className="py-20 bg-[var(--background)]">
+        <div className="container-lms">
+          <Reveal className="text-center mb-14">
+            <span
+              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-semibold mb-4"
+              style={{
+                background: "rgba(30,58,95,0.1)",
+                border: "1px solid rgba(30,58,95,0.2)",
+                color: "#1e3a5f",
+              }}
+            >
+              <Clock className="w-3.5 h-3.5" />
+              How It Works
+            </span>
+            <h2
+              className="text-4xl font-bold mb-4 tracking-tight"
+              style={{ color: "#1e3a5f" }}
+            >
+              Simple, Streamlined Workflow
+            </h2>
+            <p
+              className="text-lg max-w-2xl mx-auto leading-relaxed"
+              style={{ color: "#5a6a7a" }}
+            >
+              Four steps from login to library management — designed for
+              efficiency and ease of use.
+            </p>
+          </Reveal>
+
+          <div className="relative">
+            {/* Connector line */}
+            <div
+              className="hidden lg:block absolute top-8 left-[12.5%] right-[12.5%] h-px"
+              style={{
+                background:
+                  "linear-gradient(90deg, transparent, var(--border), var(--border), transparent)",
+              }}
+            />
+
+            <motion.div
+              variants={staggerContainer}
+              initial="hidden"
+              whileInView="visible"
+              viewport={{ once: true }}
+              className="grid md:grid-cols-2 lg:grid-cols-4 gap-8"
+            >
+              {HOW_IT_WORKS.map((step, i) => (
+                <motion.div
+                  key={step.step}
+                  variants={fadeInUp}
+                  className="text-center group"
+                >
+                  <div className="relative inline-flex mb-6">
+                    <div
+                      className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg transition-transform duration-300 group-hover:scale-110"
+                      style={{
+                        background:
+                          "linear-gradient(135deg, #1e3a5f, #2a4f7c)",
+                      }}
+                    >
+                      <step.icon className="w-7 h-7 text-white" />
+                    </div>
+                    <div
+                      className="absolute -top-2 -right-2 w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold"
+                      style={{
+                        background:
+                          "linear-gradient(135deg, #c8a96e, #b8944f)",
+                        color: "#1a2a3a",
+                      }}
+                    >
+                      {i + 1}
+                    </div>
+                  </div>
+                  <h3
+                    className="text-lg font-bold mb-2"
+                    style={{ color: "#1e3a5f" }}
+                  >
+                    {step.title}
+                  </h3>
+                  <p
+                    className="text-sm leading-relaxed"
+                    style={{ color: "#5a6a7a" }}
+                  >
+                    {step.description}
                   </p>
-                  <p className="mt-1 text-sm text-[var(--brand-dark)]/60">{stat.label}</p>
                 </motion.div>
               ))}
-            </div>
+            </motion.div>
           </div>
-        </section>
-      </Reveal>
-      {/* ── Features ─────────────────────────────────────────────────────── */}
-      <Reveal>
-        <section id="features" className="bg-white py-24 md:py-32">
-          <div className="max-w-7xl mx-auto px-6 lg:px-12">
-            <div className="max-w-2xl mb-16">
-              <span className="text-xs font-semibold uppercase tracking-widest text-[var(--brand-gold)]">
-                {t("features.eyebrow")}
-              </span>
-              <h2 className="mt-3 text-3xl sm:text-4xl font-bold text-[var(--brand-dark)] tracking-tight text-balance">
-                {t("features.heading")}
-              </h2>
-              <p className="mt-4 text-[var(--brand-dark)]/60 leading-relaxed text-pretty">
-                {t("features.subheading")}
-              </p>
-            </div>
+        </div>
+      </section>
 
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {FEATURES.map((feat, i) => (
-                <Reveal key={feat.title} delay={i * 0.07}>
-                  <motion.div whileHover={{ y: -4, transition: { duration: 0.2 } }} className="group rounded-2xl border border-[var(--brand-dark)]/8 bg-[var(--brand-cream)]/50 p-6 hover:border-[var(--brand-gold)]/40 hover:bg-[var(--brand-cream)] hover:shadow-[0_4px_24px_rgba(30,58,95,0.08)] transition-all duration-300">
-                    <div className="h-11 w-11 rounded-xl bg-[var(--brand-dark)] flex items-center justify-center mb-4 group-hover:bg-[var(--brand-gold)] transition-colors duration-300">
-                      <feat.icon className="h-5 w-5 text-white group-hover:text-[var(--brand-dark)] transition-colors duration-300" aria-hidden="true" />
-                    </div>
-                    <h3 className="font-semibold text-[var(--brand-dark)] mb-2">{feat.title}</h3>
-                    <p className="text-sm text-[var(--brand-dark)]/60 leading-relaxed">{feat.description}</p>
-                  </motion.div>
-                </Reveal>
-              ))}
-            </div>
-          </div>
-        </section>
-      </Reveal>
-      {/* ── How It Works ─────────────────────────────────────────────────── */}
-      <Reveal>
-        <section id="how-it-works" className="bg-[var(--brand-dark)] py-24 md:py-32 relative overflow-hidden">
+      {/* ── CTA BANNER ───────────────────────────────────────────────────── */}
+      <section
+        className="py-20 relative overflow-hidden"
+        style={{
+          background:
+            "linear-gradient(135deg, #1e3a5f 0%, #2a4f7c 50%, #1e3a5f 100%)",
+        }}
+      >
+        <div className="absolute inset-0 pointer-events-none">
           <div
-            className="absolute inset-0 opacity-[0.03]"
+            className="absolute top-0 right-0 w-96 h-96 rounded-full opacity-10"
             style={{
-              backgroundImage: "radial-gradient(circle at 1px 1px, white 1px, transparent 0)",
-              backgroundSize: "40px 40px",
-            }} />
-          <div className="relative z-10 max-w-7xl mx-auto px-6 lg:px-12">
-            <div className="text-center max-w-2xl mx-auto mb-16">
-              <span className="text-xs font-semibold uppercase tracking-widest text-[var(--brand-gold)]">
-                {t("howItWorks.eyebrow")}
-              </span>
-              <h2 className="mt-3 text-3xl sm:text-4xl font-bold text-white tracking-tight text-balance">
-                {t("howItWorks.heading")}
-              </h2>
-              <p className="mt-4 text-white/60 leading-relaxed text-pretty">
-                {t("howItWorks.subheading")}
-              </p>
+              background: "radial-gradient(circle, #c8a96e, transparent)",
+            }}
+          />
+          <div
+            className="absolute bottom-0 left-0 w-64 h-64 rounded-full opacity-10"
+            style={{
+              background: "radial-gradient(circle, #c8a96e, transparent)",
+            }}
+          />
+        </div>
+        <div className="container-lms relative z-10 text-center">
+          <Reveal>
+            <div
+              className="w-16 h-16 rounded-2xl mx-auto mb-6 flex items-center justify-center"
+              style={{
+                background: "linear-gradient(135deg, #c8a96e, #b8944f)",
+              }}
+            >
+              <BookOpen className="w-8 h-8 text-white" />
             </div>
-
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {HOW_IT_WORKS.map((step, i) => (
-                <Reveal key={step.step} delay={i * 0.1}>
-                  <div className="relative rounded-2xl border border-white/10 bg-white/5 p-6 hover:border-[var(--brand-gold)]/30 hover:bg-white/8 transition-all duration-300">
-                    <span className="text-5xl font-black text-[var(--brand-gold)]/20 leading-none block mb-4">
-                      {step.step}
-                    </span>
-                    <h3 className="font-semibold text-white mb-2">{step.title}</h3>
-                    <p className="text-sm text-white/60 leading-relaxed">{step.description}</p>
-                    {i < HOW_IT_WORKS.length - 1 && (
-                      <ChevronRight
-                        className="absolute -right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-[var(--brand-gold)]/40 hidden lg:block"
-                        aria-hidden="true"
-                      />
-                    )}
-                  </div>
-                </Reveal>
-              ))}
-            </div>
-          </div>
-        </section>
-      </Reveal>
-      {/* ── Admin Capabilities (split layout) ────────────────────────────── */}
-      <Reveal>
-        <section id="admin" className="bg-white py-24 md:py-32">
-          <div className="max-w-7xl mx-auto px-6 lg:px-12">
-            <div className="grid lg:grid-cols-2 gap-16 items-center">
-              {/* Left: visual */}
-              <div className="order-2 lg:order-1">
-                <div className="rounded-2xl border border-[var(--brand-dark)]/10 bg-[var(--brand-cream)] p-8 shadow-[0_4px_32px_rgba(30,58,95,0.08)]">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="h-10 w-10 rounded-xl bg-[var(--brand-dark)] flex items-center justify-center">
-                      <Shield className="h-5 w-5 text-[var(--brand-gold)]" aria-hidden="true" />
-                    </div>
-                    <div>
-                      <p className="font-semibold text-[var(--brand-dark)] text-sm">{t("admin.card_title")}</p>
-                      <p className="text-[var(--brand-dark)]/50 text-xs">{t("admin.card_subtitle")}</p>
-                    </div>
-                  </div>
-                  <div className="space-y-3">
-                    {ADMIN_CAPABILITIES.map((cap, i) => (
-                      <motion.div key={i} initial={{ opacity: 0, x: -12 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.07, duration: 0.4, ease: "easeOut" }} className="flex items-start gap-3 rounded-xl bg-white border border-[var(--brand-dark)]/6 px-4 py-3">
-                        <CheckCircle className="h-4 w-4 text-[var(--brand-gold)] flex-shrink-0 mt-0.5" aria-hidden="true" />
-                        <span className="text-sm text-[var(--brand-dark)]/80">{cap}</span>
-                      </motion.div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Right: copy */}
-              <div className="order-1 lg:order-2 space-y-6">
-                <span className="text-xs font-semibold uppercase tracking-widest text-[var(--brand-gold)]">
-                  {t("admin.eyebrow")}
-                </span>
-                <h2 className="text-3xl sm:text-4xl font-bold text-[var(--brand-dark)] tracking-tight text-balance">
-                  {t("admin.heading")}
-                </h2>
-                <p className="text-[var(--brand-dark)]/60 leading-relaxed text-pretty">
-                  {t("admin.body1")}
-                </p>
-                <p className="text-[var(--brand-dark)]/60 leading-relaxed text-pretty">
-                  {t("admin.body2")}
-                </p>
-                <div className="flex flex-wrap gap-4 pt-2">
-                  <Link href="/admin/dashboard" className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[var(--brand-dark)] text-white text-sm font-semibold hover:bg-[var(--brand-dark)]/90 transition-all duration-300 hover:-translate-y-0.5 shadow-[0_4px_16px_rgba(30,58,95,0.25)]">
-                    <UserCheck className="h-4 w-4" aria-hidden="true" />
-                    {t("admin.cta")}
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-      </Reveal>
-      {/* ── Testimonials ─────────────────────────────────────────────────── */}
-      <Reveal>
-        <section id="testimonials" className="bg-[var(--brand-cream)] py-24 md:py-32">
-          <div className="max-w-7xl mx-auto px-6 lg:px-12">
-            <div className="text-center max-w-xl mx-auto mb-16">
-              <span className="text-xs font-semibold uppercase tracking-widest text-[var(--brand-gold)]">
-                {t("testimonials.eyebrow")}
-              </span>
-              <h2 className="mt-3 text-3xl sm:text-4xl font-bold text-[var(--brand-dark)] tracking-tight text-balance">
-                {t("testimonials.heading")}
-              </h2>
-            </div>
-
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {TESTIMONIALS.map((t_item, i) => (
-                <Reveal key={t_item.name} delay={i * 0.1}>
-                  <motion.div whileHover={{ y: -4, transition: { duration: 0.2 } }} className="rounded-2xl border border-[var(--brand-dark)]/8 bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_-8px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_32px_rgba(30,58,95,0.12)] transition-all duration-300">
-                    <div className="flex gap-1 mb-4">
-                      {Array.from({ length: 5 }).map((_, si) => (
-                        <Star key={si} className="h-4 w-4 fill-[var(--brand-gold)] text-[var(--brand-gold)]" aria-hidden="true" />
-                      ))}
-                    </div>
-                    <p className="text-[var(--brand-dark)]/70 text-sm leading-relaxed mb-6">
-                      &ldquo;{t_item.quote}&rdquo;
-                    </p>
-                    <div className="flex items-center gap-3">
-                      <div className="h-10 w-10 rounded-full bg-[var(--brand-dark)] flex items-center justify-center flex-shrink-0">
-                        <span className="text-[var(--brand-gold)] text-xs font-bold">{t_item.initials}</span>
-                      </div>
-                      <div>
-                        <p className="font-semibold text-[var(--brand-dark)] text-sm">{t_item.name}</p>
-                        <p className="text-[var(--brand-dark)]/50 text-xs">{t_item.role}</p>
-                      </div>
-                    </div>
-                  </motion.div>
-                </Reveal>
-              ))}
-            </div>
-          </div>
-        </section>
-      </Reveal>
-      {/* ── CTA Banner ───────────────────────────────────────────────────── */}
-      <Reveal>
-        <section id="get-started" className="bg-[var(--brand-dark)] py-20 md:py-28 relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-[var(--brand-gold)]/10 via-transparent to-transparent pointer-events-none" />
-          <div className="relative z-10 max-w-4xl mx-auto px-6 lg:px-12 text-center space-y-8">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-[var(--brand-gold)]/30 bg-[var(--brand-gold)]/10 text-[var(--brand-gold)] text-xs font-semibold tracking-wide uppercase">
-              <Clock className="h-3.5 w-3.5" aria-hidden="true" />
-              {t("cta.badge")}
-            </div>
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white tracking-tight text-balance">
-              {t("cta.heading")}
+            <h2 className="text-4xl font-bold text-white mb-4 tracking-tight">
+              Ready to Modernize Your Library?
             </h2>
-            <p className="text-white/60 text-lg leading-relaxed max-w-2xl mx-auto text-pretty">
-              {t("cta.subheading")}
+            <p className="text-lg text-white/70 mb-10 max-w-xl mx-auto leading-relaxed">
+              Join the digital revolution in library management. Sign in to
+              explore the full system or browse the book catalog.
+            </p>
+            <div className="flex flex-wrap gap-4 justify-center">
+              <Link
+                href="/login"
+                className="inline-flex items-center gap-2 px-8 py-4 rounded-xl font-semibold text-[#1a2a3a] transition-all duration-200 hover:scale-105 hover:shadow-2xl"
+                style={{
+                  background: "linear-gradient(135deg, #c8a96e, #e8c98e)",
+                  boxShadow: "0 4px 20px rgba(200,169,110,0.4)",
+                }}
+              >
+                Sign In to LMS
+                <ArrowRight className="w-5 h-5" />
+              </Link>
+              <Link
+                href="/admin/dashboard"
+                className="inline-flex items-center gap-2 px-8 py-4 rounded-xl font-semibold text-white transition-all duration-200 hover:scale-105"
+                style={{
+                  background: "rgba(255,255,255,0.1)",
+                  border: "1px solid rgba(255,255,255,0.25)",
+                }}
+              >
+                <BarChart3 className="w-5 h-5" />
+                Admin Panel
+              </Link>
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* ── TECH STACK ───────────────────────────────────────────────────── */}
+      <section className="py-16 bg-[var(--background)]">
+        <div className="container-lms">
+          <Reveal className="text-center">
+            <p
+              className="text-sm font-semibold uppercase tracking-widest mb-6"
+              style={{ color: "#5a6a7a" }}
+            >
+              Built With
             </p>
             <div className="flex flex-wrap justify-center gap-4">
-              <Link href="/login" className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl bg-[var(--brand-gold)] text-[var(--brand-dark)] font-bold text-sm hover:bg-[var(--brand-gold)]/90 transition-all duration-300 shadow-[0_4px_24px_rgba(200,169,110,0.4)] hover:shadow-[0_6px_32px_rgba(200,169,110,0.55)] hover:-translate-y-0.5">
-                {t("cta.primary")}
-                <ArrowRight className="h-4 w-4" aria-hidden="true" />
-              </Link>
-              <Link href="/books/search" className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl border border-white/20 text-white font-semibold text-sm hover:bg-white/10 hover:border-white/40 transition-all duration-300">
-                <Search className="h-4 w-4" aria-hidden="true" />
-                {t("cta.secondary")}
-              </Link>
+              {[
+                "MongoDB",
+                "Express.js",
+                "React.js",
+                "Node.js",
+                "Tailwind CSS",
+                "JWT Auth",
+                "Supabase",
+              ].map((tech) => (
+                <span
+                  key={tech}
+                  className="px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 hover:scale-105"
+                  style={{
+                    background: "white",
+                    border: "1px solid var(--border)",
+                    color: "#1e3a5f",
+                    boxShadow: "var(--shadow-sm)",
+                  }}
+                >
+                  {tech}
+                </span>
+              ))}
             </div>
-            <p className="text-white/30 text-xs">
-              {t("cta.footnote")}
-            </p>
-          </div>
-        </section>
-      </Reveal>
-    </main>
+          </Reveal>
+        </div>
+      </section>
+    </div>
   );
 }

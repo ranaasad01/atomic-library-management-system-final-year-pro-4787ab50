@@ -2,30 +2,42 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Mail, Lock, Eye, EyeOff, BookOpen, Users, Shield, ArrowRight, AlertCircle, CheckCircle, ChevronDown } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, BookOpen, Users, Shield, ArrowRight, AlertCircle, CheckCircle, ChevronDown, Sparkles } from 'lucide-react';
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-type APP_NAME = any;
-const APP_NAME: any = [];
-type APP_TAGLINE = any;
-const APP_TAGLINE: any = [];
-type APP_BRAND = any;
-const APP_BRAND: any = [];
 import { fadeInUp, scaleIn } from "@/lib/motion";
-import { Reveal } from "@/components/Reveal";
+import { BRAND } from "@/lib/data";
 
 type AuthMode = "login" | "forgot";
 type UserRole = "member" | "admin";
 
-const ROLE_OPTIONS: { value: UserRole; label: string; description: string }[] = [
-  { value: "member", label: "Library Member", description: "Access your borrowed books and fines" },
-  { value: "admin", label: "Administrator", description: "Full library management access" },
-];
+const ROLE_OPTIONS: { value: UserRole; label: string; description: string }[] =
+  [
+    {
+      value: "member",
+      label: "Library Member",
+      description: "Access your borrowed books and fines",
+    },
+    {
+      value: "admin",
+      label: "Administrator",
+      description: "Full library management access",
+    },
+  ];
 
 const FEATURES = [
-  { icon: BookOpen, text: "Manage 10,000+ books across all departments" },
-  { icon: Users, text: "Track members, issues, and returns in real time" },
-  { icon: Shield, text: "Role-based access with JWT authentication" },
+  {
+    icon: BookOpen,
+    text: "Manage 10,000+ books across all departments",
+  },
+  {
+    icon: Users,
+    text: "Track members, issues, and returns in real time",
+  },
+  {
+    icon: Shield,
+    text: "Role-based access with JWT authentication",
+  },
 ];
 
 export default function LoginPage() {
@@ -41,204 +53,259 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [touched, setTouched] = useState<{
+    email?: boolean;
+    password?: boolean;
+  }>({});
 
-  // Inline validation
-  const [touched, setTouched] = useState<{ email?: boolean; password?: boolean }>({});
-  const emailError = touched.email && !email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/) ? "Enter a valid email address" : null;
-  const passwordError = touched.password && mode === "login" && password.length < 6 ? "Password must be at least 6 characters" : null;
+  const emailError =
+    touched.email && !email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)
+      ? "Enter a valid email address"
+      : null;
+  const passwordError =
+    touched.password && mode === "login" && password.length < 6
+      ? "Password must be at least 6 characters"
+      : null;
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     setTouched({ email: true, password: true });
     if (emailError || passwordError || !email || !password) return;
-
     setLoading(true);
     setError(null);
-
-    const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password });
-
+    const { data, error: authError } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
     if (authError || !data.user) {
       setError(authError?.message ?? "Invalid credentials. Please try again.");
       setLoading(false);
       return;
     }
-
-    // Fetch user role from users table
     const { data: userRow } = await supabase
       .from("users")
       .select("role")
       .eq("id", data.user.id)
       .single();
-
     const userRole = userRow?.role ?? "member";
-
     if (userRole === "admin") {
       router.push("/admin/dashboard");
     } else {
       router.push("/dashboard");
     }
+    setLoading(false);
   }
 
   async function handleForgotPassword(e: React.FormEvent) {
     e.preventDefault();
     setTouched({ email: true });
-    if (!email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) return;
-
+    if (emailError || !email) return;
     setLoading(true);
     setError(null);
-
-    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/callback`,
-    });
-
-    setLoading(false);
-
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(
+      email,
+      { redirectTo: `${window.location.origin}/auth/callback` }
+    );
     if (resetError) {
       setError(resetError.message);
     } else {
-      setSuccessMsg("Password reset email sent. Please check your inbox.");
+      setSuccessMsg("Password reset email sent! Check your inbox.");
     }
+    setLoading(false);
   }
-
-  function switchMode(newMode: AuthMode) {
-    setMode(newMode);
-    setError(null);
-    setSuccessMsg(null);
-    setTouched({});
-  }
-
-  const formVariants = {
-    hidden: { opacity: 0, x: 20 },
-    visible: { opacity: 1, x: 0, transition: { duration: 0.35, ease: "easeOut" } },
-    exit: { opacity: 0, x: -20, transition: { duration: 0.25, ease: "easeIn" } },
-  };
 
   return (
-    <div className="min-h-screen flex bg-[var(--color-cream)]">
-      {/* ── Left Panel: Institutional Hero ─────────────────────────────── */}
-      <div className="hidden lg:flex lg:w-[52%] xl:w-[55%] flex-col relative overflow-hidden bg-[var(--color-navy)]">
-        {/* Decorative background pattern */}
-        <div className="absolute inset-0 opacity-10">
-          <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
-                <path d="M 40 0 L 0 0 0 40" fill="none" stroke="white" strokeWidth="0.5" />
-              </pattern>
-            </defs>
-            <rect width="100%" height="100%" fill="url(#grid)" />
-          </svg>
-        </div>
+    <div
+      className="min-h-screen flex"
+      style={{ background: "var(--background)" }}
+    >
+      {/* ── Left panel — branding ─────────────────────────────────────── */}
+      <div
+        className="hidden lg:flex lg:w-[52%] relative overflow-hidden flex-col justify-between p-14"
+        style={{
+          background:
+            "linear-gradient(145deg, #0a1628 0%, #1e3a5f 55%, #2a5080 100%)",
+        }}
+      >
+        {/* Decorative grid */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            backgroundImage:
+              "linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px)",
+            backgroundSize: "48px 48px",
+          }}
+        />
+        {/* Gold glow top-right */}
+        <div
+          className="absolute -top-40 -right-40 w-[480px] h-[480px] rounded-full pointer-events-none"
+          style={{
+            background:
+              "radial-gradient(circle, rgba(200,169,110,0.18) 0%, transparent 70%)",
+          }}
+        />
+        {/* Gold glow bottom-left */}
+        <div
+          className="absolute -bottom-40 -left-40 w-[400px] h-[400px] rounded-full pointer-events-none"
+          style={{
+            background:
+              "radial-gradient(circle, rgba(200,169,110,0.12) 0%, transparent 70%)",
+          }}
+        />
+        {/* Subtle horizontal rule accent */}
+        <div
+          className="absolute left-0 top-1/2 w-full h-px pointer-events-none"
+          style={{
+            background:
+              "linear-gradient(90deg, transparent, rgba(200,169,110,0.15), transparent)",
+          }}
+        />
 
-        {/* Radial glow */}
-        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full bg-[var(--color-gold)]/10 blur-3xl pointer-events-none" />
-
-        <div className="relative z-10 flex flex-col h-full px-12 py-14">
-          {/* Logo + Brand */}
-          <motion.div
-            initial={{ opacity: 0, y: -16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, ease: "easeOut" }}
-            className="flex items-center gap-3"
-          >
-            <div className="w-12 h-12 rounded-xl bg-[var(--color-gold)] flex items-center justify-center shadow-lg">
-              <BookOpen className="w-6 h-6 text-[var(--color-navy)]" />
+        {/* Logo */}
+        <div className="relative z-10">
+          <div className="flex items-center gap-3">
+            <div
+              className="w-11 h-11 rounded-2xl flex items-center justify-center shadow-lg"
+              style={{
+                background: "linear-gradient(135deg, #c8a96e, #b8944f)",
+                boxShadow: "0 4px 20px rgba(200,169,110,0.35)",
+              }}
+            >
+              <BookOpen className="w-5 h-5 text-white" />
             </div>
             <div>
-              <div className="text-white font-bold text-lg leading-tight">NCBA&amp;E</div>
-              <div className="text-[var(--color-gold)]/80 text-xs font-medium tracking-wide">Library Management System</div>
+              <div className="text-white font-bold text-base leading-tight tracking-tight">
+                {BRAND.shortName}
+              </div>
+              <div className="text-white/40 text-[11px] tracking-widest uppercase">
+                {BRAND.project}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Main content */}
+        <div className="relative z-10">
+          <motion.div
+            initial={{ opacity: 0, y: 32 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.65, ease: "easeOut" }}
+          >
+            {/* Badge */}
+            <span
+              className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold mb-8"
+              style={{
+                background: "rgba(200,169,110,0.18)",
+                border: "1px solid rgba(200,169,110,0.35)",
+                color: "#e8c98e",
+              }}
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              NCBA&amp;E — Final Year Project 2026
+            </span>
+
+            <h1 className="text-5xl font-bold text-white mb-5 leading-[1.1] tracking-tight">
+              Welcome to{" "}
+              <br />
+              <span
+                style={{
+                  background:
+                    "linear-gradient(135deg, #c8a96e 0%, #e8d4a0 50%, #c8a96e 100%)",
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                  backgroundClip: "text",
+                }}
+              >
+                the Library
+              </span>
+            </h1>
+
+            <p className="text-white/55 text-lg leading-relaxed mb-12 max-w-sm">
+              Your institutional gateway to library resources. Books, members,
+              transactions, and more — all in one place.
+            </p>
+
+            {/* Feature list */}
+            <div className="space-y-4">
+              {FEATURES.map((f, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, x: -24 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.25 + i * 0.12, duration: 0.45, ease: "easeOut" }}
+                  className="flex items-center gap-3.5"
+                >
+                  <div
+                    className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                    style={{
+                      background: "rgba(200,169,110,0.14)",
+                      border: "1px solid rgba(200,169,110,0.28)",
+                    }}
+                  >
+                    <f.icon className="w-4 h-4" style={{ color: "#c8a96e" }} />
+                  </div>
+                  <span className="text-white/65 text-sm leading-snug">
+                    {f.text}
+                  </span>
+                </motion.div>
+              ))}
             </div>
           </motion.div>
+        </div>
 
-          {/* Main heading */}
-          <motion.div
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.65, ease: "easeOut", delay: 0.15 }}
-            className="mt-16"
-          >
-            <h1 className="text-4xl xl:text-5xl font-bold text-white leading-tight tracking-tight text-balance">
-              Your Gateway to<br />
-              <span className="text-[var(--color-gold)]">Knowledge &amp; Learning</span>
-            </h1>
-            <p className="mt-4 text-white/60 text-base leading-relaxed max-w-sm text-pretty">
-              National College of Business Administration &amp; Economics — a unified platform for managing library resources, members, and transactions.
-            </p>
-          </motion.div>
-
-          {/* Book Stack SVG Illustration */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.7, ease: "easeOut", delay: 0.3 }}
-            className="mt-12 flex justify-center"
-          >
-            <svg width="260" height="200" viewBox="0 0 260 200" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Stack of library books illustration">
-              {/* Book 1 - bottom, widest */}
-              <rect x="20" y="155" width="220" height="32" rx="4" fill="#c8a96e" opacity="0.9" />
-              <rect x="20" y="155" width="18" height="32" rx="4" fill="#a07840" />
-              <text x="50" y="176" fill="white" fontSize="11" fontFamily="Inter, sans-serif" fontWeight="500" opacity="0.9">Introduction to Business Administration</text>
-
-              {/* Book 2 */}
-              <rect x="30" y="118" width="200" height="32" rx="4" fill="#1e3a5f" opacity="0.95" />
-              <rect x="30" y="118" width="18" height="32" rx="4" fill="#152d4a" />
-              <text x="60" y="139" fill="#c8a96e" fontSize="11" fontFamily="Inter, sans-serif" fontWeight="500">Principles of Economics</text>
-
-              {/* Book 3 */}
-              <rect x="40" y="81" width="180" height="32" rx="4" fill="#2a5298" opacity="0.9" />
-              <rect x="40" y="81" width="18" height="32" rx="4" fill="#1e3a6e" />
-              <text x="70" y="102" fill="white" fontSize="11" fontFamily="Inter, sans-serif" fontWeight="500">Financial Accounting</text>
-
-              {/* Book 4 */}
-              <rect x="50" y="44" width="160" height="32" rx="4" fill="#c8a96e" opacity="0.85" />
-              <rect x="50" y="44" width="18" height="32" rx="4" fill="#a07840" />
-              <text x="80" y="65" fill="white" fontSize="11" fontFamily="Inter, sans-serif" fontWeight="500">Marketing Management</text>
-
-              {/* Book 5 - top, narrowest */}
-              <rect x="65" y="10" width="130" height="30" rx="4" fill="#1e3a5f" opacity="0.8" />
-              <rect x="65" y="10" width="18" height="30" rx="4" fill="#152d4a" />
-              <text x="95" y="30" fill="#c8a96e" fontSize="10" fontFamily="Inter, sans-serif" fontWeight="500">Research Methods</text>
-
-              {/* Bookmark ribbon on top book */}
-              <rect x="155" y="0" width="10" height="22" rx="2" fill="#e74c3c" opacity="0.9" />
-              <polygon points="155,22 165,22 160,28" fill="#e74c3c" opacity="0.9" />
-            </svg>
-          </motion.div>
-
-          {/* Feature list */}
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, ease: "easeOut", delay: 0.45 }}
-            className="mt-10 space-y-3"
-          >
-            {FEATURES.map((f) => (
-              <div key={f.text} className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center flex-shrink-0">
-                  <f.icon className="w-4 h-4 text-[var(--color-gold)]" />
-                </div>
-                <span className="text-white/70 text-sm">{f.text}</span>
-              </div>
-            ))}
-          </motion.div>
-
-          {/* Footer tagline */}
-          <div className="mt-auto pt-8 border-t border-white/10">
-            <p className="text-white/40 text-xs">{APP_TAGLINE}</p>
-          </div>
+        {/* Bottom info */}
+        <div className="relative z-10 flex items-center gap-3">
+          <div
+            className="h-px flex-1"
+            style={{
+              background:
+                "linear-gradient(90deg, rgba(200,169,110,0.3), transparent)",
+            }}
+          />
+          <p className="text-white/30 text-xs whitespace-nowrap">
+            {BRAND.institution} &middot; {BRAND.year}
+          </p>
         </div>
       </div>
 
-      {/* ── Right Panel: Auth Form ──────────────────────────────────────── */}
-      <div className="flex-1 flex items-center justify-center px-6 py-12 sm:px-10 lg:px-16">
-        <div className="w-full max-w-md">
+      {/* ── Right panel — form ────────────────────────────────────────── */}
+      <div className="flex-1 flex items-center justify-center p-6 lg:p-14 relative overflow-hidden">
+        {/* Subtle background texture */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            backgroundImage:
+              "radial-gradient(circle at 70% 20%, rgba(200,169,110,0.07) 0%, transparent 55%), radial-gradient(circle at 20% 80%, rgba(30,58,95,0.06) 0%, transparent 50%)",
+          }}
+        />
+
+        <motion.div
+          variants={scaleIn}
+          initial="hidden"
+          animate="visible"
+          className="w-full max-w-[420px] relative z-10"
+        >
           {/* Mobile logo */}
-          <div className="flex lg:hidden items-center gap-3 mb-8">
-            <div className="w-10 h-10 rounded-xl bg-[var(--color-navy)] flex items-center justify-center">
-              <BookOpen className="w-5 h-5 text-[var(--color-gold)]" />
+          <div className="flex lg:hidden items-center gap-2.5 mb-10">
+            <div
+              className="w-10 h-10 rounded-xl flex items-center justify-center"
+              style={{
+                background: "linear-gradient(135deg, #1e3a5f, #2a5080)",
+                boxShadow: "0 4px 16px rgba(30,58,95,0.25)",
+              }}
+            >
+              <BookOpen className="w-5 h-5 text-white" />
             </div>
             <div>
-              <div className="text-[var(--color-navy)] font-bold text-base leading-tight">NCBA&amp;E LMS</div>
-              <div className="text-[var(--color-navy)]/50 text-xs">Library Management System</div>
+              <div
+                className="font-bold text-sm"
+                style={{ color: "#1e3a5f" }}
+              >
+                {BRAND.shortName}
+              </div>
+              <div className="text-xs" style={{ color: "#5a6a7a" }}>
+                {BRAND.project}
+              </div>
             </div>
           </div>
 
@@ -246,53 +313,110 @@ export default function LoginPage() {
             {mode === "login" ? (
               <motion.div
                 key="login"
-                variants={formVariants}
+                variants={fadeInUp}
                 initial="hidden"
                 animate="visible"
-                exit="exit"
+                exit={{ opacity: 0, y: -12, transition: { duration: 0.2 } }}
               >
                 {/* Heading */}
                 <div className="mb-8">
-                  <h2 className="text-2xl sm:text-3xl font-bold text-[var(--color-navy)] tracking-tight">
-                    Sign in to your account
+                  <h2
+                    className="text-3xl font-bold mb-2 tracking-tight"
+                    style={{ color: "#1e3a5f" }}
+                  >
+                    Sign In
                   </h2>
-                  <p className="mt-2 text-[var(--color-navy)]/55 text-sm leading-relaxed">
-                    Enter your credentials to access the library portal.
+                  <p className="text-sm leading-relaxed" style={{ color: "#5a6a7a" }}>
+                    Access your library account to manage books and transactions.
                   </p>
                 </div>
 
-                {/* Role Selector */}
-                <div className="mb-5">
-                  <label className="block text-xs font-semibold text-[var(--color-navy)]/70 uppercase tracking-wider mb-2">
+                {/* Role selector */}
+                <div className="mb-6">
+                  <label
+                    className="block text-xs font-semibold uppercase tracking-wider mb-2"
+                    style={{ color: "#1e3a5f" }}
+                  >
                     Sign in as
                   </label>
                   <div className="relative">
                     <button
                       type="button"
-                      onClick={() => setRoleDropdownOpen((v) => !v)}
-                      className="w-full flex items-center justify-between px-4 py-3 rounded-xl border border-[var(--color-navy)]/20 bg-white text-[var(--color-navy)] text-sm font-medium hover:border-[var(--color-navy)]/40 transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--color-gold)]/40"
+                      onClick={() => setRoleDropdownOpen(!roleDropdownOpen)}
+                      className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 focus-visible:outline-none"
+                      style={{
+                        background: "white",
+                        border: "1.5px solid var(--border)",
+                        color: "#1e3a5f",
+                        boxShadow: roleDropdownOpen
+                          ? "0 0 0 3px rgba(200,169,110,0.18)"
+                          : "0 1px 3px rgba(30,58,95,0.06)",
+                      }}
                     >
-                      <span>{ROLE_OPTIONS.find((r) => r.value === role)?.label}</span>
-                      <ChevronDown className={`w-4 h-4 text-[var(--color-navy)]/50 transition-transform ${roleDropdownOpen ? "rotate-180" : ""}`} />
+                      <span>
+                        {ROLE_OPTIONS.find((r) => r.value === role)?.label}
+                      </span>
+                      <ChevronDown
+                        className={`w-4 h-4 transition-transform duration-200 ${
+                          roleDropdownOpen ? "rotate-180" : ""
+                        }`}
+                        style={{ color: "#5a6a7a" }}
+                      />
                     </button>
+
                     <AnimatePresence>
                       {roleDropdownOpen && (
                         <motion.div
-                          initial={{ opacity: 0, y: -6 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -6 }}
-                          transition={{ duration: 0.18 }}
-                          className="absolute z-20 top-full mt-1 w-full bg-white rounded-xl border border-[var(--color-navy)]/15 shadow-[0_8px_24px_-8px_rgba(30,58,95,0.18)] overflow-hidden"
+                          initial={{ opacity: 0, y: -6, scale: 0.98 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: -6, scale: 0.98 }}
+                          transition={{ duration: 0.15 }}
+                          className="absolute top-full left-0 right-0 mt-1.5 rounded-xl overflow-hidden z-20"
+                          style={{
+                            background: "white",
+                            border: "1px solid var(--border)",
+                            boxShadow:
+                              "0 8px 32px -8px rgba(30,58,95,0.18), 0 2px 8px rgba(30,58,95,0.08)",
+                          }}
                         >
                           {ROLE_OPTIONS.map((opt) => (
                             <button
                               key={opt.value}
                               type="button"
-                              onClick={() => { setRole(opt.value); setRoleDropdownOpen(false); }}
-                              className={`w-full text-left px-4 py-3 hover:bg-[var(--color-cream)] transition-colors ${role === opt.value ? "bg-[var(--color-cream)]" : ""}`}
+                              onClick={() => {
+                                setRole(opt.value);
+                                setRoleDropdownOpen(false);
+                              }}
+                              className="w-full flex flex-col items-start px-4 py-3.5 text-left transition-colors duration-150"
+                              style={{
+                                background:
+                                  role === opt.value
+                                    ? "rgba(200,169,110,0.08)"
+                                    : "transparent",
+                              }}
+                              onMouseEnter={(e) =>
+                                (e.currentTarget.style.background =
+                                  "rgba(200,169,110,0.08)")
+                              }
+                              onMouseLeave={(e) =>
+                                (e.currentTarget.style.background =
+                                  role === opt.value
+                                    ? "rgba(200,169,110,0.08)"
+                                    : "transparent")
+                              }
                             >
-                              <div className="text-sm font-semibold text-[var(--color-navy)]">{opt.label}</div>
-                              <div className="text-xs text-[var(--color-navy)]/50 mt-0.5">{opt.description}</div>
+                              <span
+                                className="text-sm font-semibold"
+                                style={{ color: "#1e3a5f" }}
+                              >
+                                {opt.label}
+                              </span>
+                              <span
+                                className="text-xs mt-0.5"
+                                style={{ color: "#5a6a7a" }}
+                              >
+                                {opt.description}
+                              </span>
                             </button>
                           ))}
                         </motion.div>
@@ -301,116 +425,199 @@ export default function LoginPage() {
                   </div>
                 </div>
 
-                {/* Login Form */}
-                <form onSubmit={handleLogin} noValidate className="space-y-4">
+                <form onSubmit={handleLogin} className="space-y-5">
                   {/* Email */}
                   <div>
-                    <label htmlFor="email" className="block text-xs font-semibold text-[var(--color-navy)]/70 uppercase tracking-wider mb-1.5">
+                    <label
+                      className="block text-xs font-semibold uppercase tracking-wider mb-2"
+                      style={{ color: "#1e3a5f" }}
+                    >
                       Email Address
                     </label>
                     <div className="relative">
-                      <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--color-navy)]/35 pointer-events-none" />
+                      <Mail
+                        className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none"
+                        style={{ color: "#5a6a7a" }}
+                      />
                       <input
-                        id="email"
                         type="email"
-                        autoComplete="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        onBlur={() => setTouched((t) => ({ ...t, email: true }))}
+                        onBlur={() =>
+                          setTouched((t) => ({ ...t, email: true }))
+                        }
                         placeholder="you@ncbae.edu.pk"
-                        className={`w-full pl-10 pr-4 py-3 rounded-xl border text-sm text-[var(--color-navy)] bg-white placeholder:text-[var(--color-navy)]/30 focus:outline-none focus:ring-2 transition-all ${
-                          emailError
-                            ? "border-[var(--color-red)] focus:ring-[var(--color-red)]/20"
-                            : "border-[var(--color-navy)]/20 focus:ring-[var(--color-gold)]/30 focus:border-[var(--color-gold)]"
-                        }`}
+                        className="w-full pl-10 pr-4 py-3 rounded-xl text-sm transition-all duration-200 outline-none"
+                        style={{
+                          background: "white",
+                          border: emailError
+                            ? "1.5px solid #e74c3c"
+                            : "1.5px solid var(--border)",
+                          color: "#1a2a3a",
+                          boxShadow: emailError
+                            ? "0 0 0 3px rgba(231,76,60,0.1)"
+                            : "0 1px 3px rgba(30,58,95,0.06)",
+                        }}
+                        onFocus={(e) => {
+                          if (!emailError)
+                            e.currentTarget.style.boxShadow =
+                              "0 0 0 3px rgba(200,169,110,0.18)";
+                          e.currentTarget.style.borderColor = emailError
+                            ? "#e74c3c"
+                            : "#c8a96e";
+                        }}
+                        onBlurCapture={(e) => {
+                          e.currentTarget.style.boxShadow = emailError
+                            ? "0 0 0 3px rgba(231,76,60,0.1)"
+                            : "0 1px 3px rgba(30,58,95,0.06)";
+                          e.currentTarget.style.borderColor = emailError
+                            ? "#e74c3c"
+                            : "var(--border)";
+                        }}
                       />
                     </div>
                     {emailError && (
-                      <p className="mt-1.5 text-xs text-[var(--color-red)] flex items-center gap-1">
-                        <AlertCircle className="w-3 h-3" /> {emailError}
+                      <p className="mt-1.5 text-xs text-red-600 flex items-center gap-1">
+                        <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                        {emailError}
                       </p>
                     )}
                   </div>
 
                   {/* Password */}
                   <div>
-                    <label htmlFor="password" className="block text-xs font-semibold text-[var(--color-navy)]/70 uppercase tracking-wider mb-1.5">
+                    <label
+                      className="block text-xs font-semibold uppercase tracking-wider mb-2"
+                      style={{ color: "#1e3a5f" }}
+                    >
                       Password
                     </label>
                     <div className="relative">
-                      <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--color-navy)]/35 pointer-events-none" />
+                      <Lock
+                        className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none"
+                        style={{ color: "#5a6a7a" }}
+                      />
                       <input
-                        id="password"
                         type={showPassword ? "text" : "password"}
-                        autoComplete="current-password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        onBlur={() => setTouched((t) => ({ ...t, password: true }))}
+                        onBlur={() =>
+                          setTouched((t) => ({ ...t, password: true }))
+                        }
                         placeholder="••••••••"
-                        className={`w-full pl-10 pr-11 py-3 rounded-xl border text-sm text-[var(--color-navy)] bg-white placeholder:text-[var(--color-navy)]/30 focus:outline-none focus:ring-2 transition-all ${
-                          passwordError
-                            ? "border-[var(--color-red)] focus:ring-[var(--color-red)]/20"
-                            : "border-[var(--color-navy)]/20 focus:ring-[var(--color-gold)]/30 focus:border-[var(--color-gold)]"
-                        }`}
+                        className="w-full pl-10 pr-12 py-3 rounded-xl text-sm transition-all duration-200 outline-none"
+                        style={{
+                          background: "white",
+                          border: passwordError
+                            ? "1.5px solid #e74c3c"
+                            : "1.5px solid var(--border)",
+                          color: "#1a2a3a",
+                          boxShadow: passwordError
+                            ? "0 0 0 3px rgba(231,76,60,0.1)"
+                            : "0 1px 3px rgba(30,58,95,0.06)",
+                        }}
+                        onFocus={(e) => {
+                          if (!passwordError)
+                            e.currentTarget.style.boxShadow =
+                              "0 0 0 3px rgba(200,169,110,0.18)";
+                          e.currentTarget.style.borderColor = passwordError
+                            ? "#e74c3c"
+                            : "#c8a96e";
+                        }}
+                        onBlurCapture={(e) => {
+                          e.currentTarget.style.boxShadow = passwordError
+                            ? "0 0 0 3px rgba(231,76,60,0.1)"
+                            : "0 1px 3px rgba(30,58,95,0.06)";
+                          e.currentTarget.style.borderColor = passwordError
+                            ? "#e74c3c"
+                            : "var(--border)";
+                        }}
                       />
                       <button
                         type="button"
-                        onClick={() => setShowPassword((v) => !v)}
-                        className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[var(--color-navy)]/40 hover:text-[var(--color-navy)]/70 transition-colors"
-                        aria-label={showPassword ? "Hide password" : "Show password"}
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3.5 top-1/2 -translate-y-1/2 p-0.5 rounded transition-colors duration-150"
+                        style={{ color: "#5a6a7a" }}
                       >
-                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        {showPassword ? (
+                          <EyeOff className="w-4 h-4" />
+                        ) : (
+                          <Eye className="w-4 h-4" />
+                        )}
                       </button>
                     </div>
                     {passwordError && (
-                      <p className="mt-1.5 text-xs text-[var(--color-red)] flex items-center gap-1">
-                        <AlertCircle className="w-3 h-3" /> {passwordError}
+                      <p className="mt-1.5 text-xs text-red-600 flex items-center gap-1">
+                        <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                        {passwordError}
                       </p>
                     )}
                   </div>
 
-                  {/* Error Alert */}
+                  {/* Forgot password */}
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMode("forgot");
+                        setError(null);
+                        setSuccessMsg(null);
+                      }}
+                      className="text-xs font-semibold uppercase tracking-wider hover:underline transition-all duration-150"
+                      style={{ color: "#c8a96e" }}
+                    >
+                      Forgot password?
+                    </button>
+                  </div>
+
+                  {/* Error */}
                   <AnimatePresence>
                     {error && (
                       <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: "auto" }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="overflow-hidden"
+                        initial={{ opacity: 0, y: -8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0 }}
+                        className="flex items-start gap-2.5 px-4 py-3 rounded-xl text-sm"
+                        style={{
+                          background: "rgba(231,76,60,0.07)",
+                          border: "1px solid rgba(231,76,60,0.2)",
+                          color: "#c0392b",
+                        }}
                       >
-                        <div className="flex items-start gap-2.5 px-4 py-3 rounded-xl bg-[var(--color-red)]/8 border border-[var(--color-red)]/20">
-                          <AlertCircle className="w-4 h-4 text-[var(--color-red)] flex-shrink-0 mt-0.5" />
-                          <p className="text-sm text-[var(--color-red)]">{error}</p>
-                        </div>
+                        <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                        <span>{error}</span>
                       </motion.div>
                     )}
                   </AnimatePresence>
 
-                  {/* Forgot Password link */}
-                  <div className="flex justify-end">
-                    <button
-                      type="button"
-                      onClick={() => switchMode("forgot")}
-                      className="text-xs text-[var(--color-gold)] hover:text-[var(--color-navy)] font-medium transition-colors"
-                    >
-                      Forgot your password?
-                    </button>
-                  </div>
-
                   {/* Submit */}
-                  <motion.button
+                  <button
                     type="submit"
                     disabled={loading}
-                    whileHover={{ scale: loading ? 1 : 1.01 }}
-                    whileTap={{ scale: loading ? 1 : 0.98 }}
-                    className="w-full flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-[var(--color-navy)] text-white text-sm font-semibold hover:bg-[var(--color-navy)]/90 disabled:opacity-60 disabled:cursor-not-allowed transition-all shadow-[0_4px_16px_-4px_rgba(30,58,95,0.4)] focus:outline-none focus:ring-2 focus:ring-[var(--color-gold)]/50"
+                    className="w-full flex items-center justify-center gap-2.5 py-3.5 rounded-xl font-semibold text-sm transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
+                    style={{
+                      background:
+                        "linear-gradient(135deg, #1e3a5f 0%, #2a5080 100%)",
+                      color: "white",
+                      boxShadow:
+                        "0 4px 20px rgba(30,58,95,0.35), 0 1px 3px rgba(30,58,95,0.2)",
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!loading) {
+                        e.currentTarget.style.transform = "translateY(-1px)";
+                        e.currentTarget.style.boxShadow =
+                          "0 8px 28px rgba(30,58,95,0.4), 0 2px 6px rgba(30,58,95,0.2)";
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = "";
+                      e.currentTarget.style.boxShadow =
+                        "0 4px 20px rgba(30,58,95,0.35), 0 1px 3px rgba(30,58,95,0.2)";
+                    }}
                   >
                     {loading ? (
                       <>
-                        <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                        </svg>
+                        <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                         Signing in...
                       </>
                     ) : (
@@ -419,59 +626,132 @@ export default function LoginPage() {
                         <ArrowRight className="w-4 h-4" />
                       </>
                     )}
-                  </motion.button>
+                  </button>
                 </form>
 
-                {/* Role hint */}
-                <div className="mt-6 p-4 rounded-xl bg-[var(--color-navy)]/5 border border-[var(--color-navy)]/10">
-                  <p className="text-xs text-[var(--color-navy)]/60 text-center leading-relaxed">
-                    Access is restricted to registered NCBA&amp;E library members and staff. Contact the library administrator for account setup.
-                  </p>
+                {/* Divider */}
+                <div className="flex items-center gap-3 my-6">
+                  <div
+                    className="flex-1 h-px"
+                    style={{ background: "var(--border)" }}
+                  />
+                  <span className="text-xs" style={{ color: "#8a9aaa" }}>
+                    secured by JWT
+                  </span>
+                  <div
+                    className="flex-1 h-px"
+                    style={{ background: "var(--border)" }}
+                  />
+                </div>
+
+                {/* Trust badges */}
+                <div className="flex items-center justify-center gap-6">
+                  {[
+                    { icon: Shield, label: "JWT Auth" },
+                    { icon: BookOpen, label: "NCBA&E" },
+                    { icon: Users, label: "Role-Based" },
+                  ].map((b) => (
+                    <div
+                      key={b.label}
+                      className="flex flex-col items-center gap-1"
+                    >
+                      <div
+                        className="w-8 h-8 rounded-lg flex items-center justify-center"
+                        style={{
+                          background: "rgba(30,58,95,0.07)",
+                          border: "1px solid rgba(30,58,95,0.1)",
+                        }}
+                      >
+                        <b.icon
+                          className="w-3.5 h-3.5"
+                          style={{ color: "#1e3a5f" }}
+                        />
+                      </div>
+                      <span
+                        className="text-[10px] font-medium"
+                        style={{ color: "#8a9aaa" }}
+                      >
+                        {b.label}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </motion.div>
             ) : (
-              /* ── Forgot Password Form ── */
               <motion.div
                 key="forgot"
-                variants={formVariants}
+                variants={fadeInUp}
                 initial="hidden"
                 animate="visible"
-                exit="exit"
+                exit={{ opacity: 0, y: -12, transition: { duration: 0.2 } }}
               >
+                {/* Heading */}
                 <div className="mb-8">
-                  <h2 className="text-2xl sm:text-3xl font-bold text-[var(--color-navy)] tracking-tight">
-                    Reset your password
+                  <h2
+                    className="text-3xl font-bold mb-2 tracking-tight"
+                    style={{ color: "#1e3a5f" }}
+                  >
+                    Reset Password
                   </h2>
-                  <p className="mt-2 text-[var(--color-navy)]/55 text-sm leading-relaxed">
-                    Enter your registered email and we will send you a reset link.
+                  <p className="text-sm leading-relaxed" style={{ color: "#5a6a7a" }}>
+                    Enter your registered email to receive a password reset link.
                   </p>
                 </div>
 
-                <form onSubmit={handleForgotPassword} noValidate className="space-y-4">
+                <form onSubmit={handleForgotPassword} className="space-y-5">
                   <div>
-                    <label htmlFor="reset-email" className="block text-xs font-semibold text-[var(--color-navy)]/70 uppercase tracking-wider mb-1.5">
+                    <label
+                      className="block text-xs font-semibold uppercase tracking-wider mb-2"
+                      style={{ color: "#1e3a5f" }}
+                    >
                       Email Address
                     </label>
                     <div className="relative">
-                      <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--color-navy)]/35 pointer-events-none" />
+                      <Mail
+                        className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none"
+                        style={{ color: "#5a6a7a" }}
+                      />
                       <input
-                        id="reset-email"
                         type="email"
-                        autoComplete="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        onBlur={() => setTouched((t) => ({ ...t, email: true }))}
+                        onBlur={() =>
+                          setTouched((t) => ({ ...t, email: true }))
+                        }
                         placeholder="you@ncbae.edu.pk"
-                        className={`w-full pl-10 pr-4 py-3 rounded-xl border text-sm text-[var(--color-navy)] bg-white placeholder:text-[var(--color-navy)]/30 focus:outline-none focus:ring-2 transition-all ${
-                          emailError
-                            ? "border-[var(--color-red)] focus:ring-[var(--color-red)]/20"
-                            : "border-[var(--color-navy)]/20 focus:ring-[var(--color-gold)]/30 focus:border-[var(--color-gold)]"
-                        }`}
+                        className="w-full pl-10 pr-4 py-3 rounded-xl text-sm transition-all duration-200 outline-none"
+                        style={{
+                          background: "white",
+                          border: emailError
+                            ? "1.5px solid #e74c3c"
+                            : "1.5px solid var(--border)",
+                          color: "#1a2a3a",
+                          boxShadow: emailError
+                            ? "0 0 0 3px rgba(231,76,60,0.1)"
+                            : "0 1px 3px rgba(30,58,95,0.06)",
+                        }}
+                        onFocus={(e) => {
+                          if (!emailError)
+                            e.currentTarget.style.boxShadow =
+                              "0 0 0 3px rgba(200,169,110,0.18)";
+                          e.currentTarget.style.borderColor = emailError
+                            ? "#e74c3c"
+                            : "#c8a96e";
+                        }}
+                        onBlurCapture={(e) => {
+                          e.currentTarget.style.boxShadow = emailError
+                            ? "0 0 0 3px rgba(231,76,60,0.1)"
+                            : "0 1px 3px rgba(30,58,95,0.06)";
+                          e.currentTarget.style.borderColor = emailError
+                            ? "#e74c3c"
+                            : "var(--border)";
+                        }}
                       />
                     </div>
                     {emailError && (
-                      <p className="mt-1.5 text-xs text-[var(--color-red)] flex items-center gap-1">
-                        <AlertCircle className="w-3 h-3" /> {emailError}
+                      <p className="mt-1.5 text-xs text-red-600 flex items-center gap-1">
+                        <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                        {emailError}
                       </p>
                     )}
                   </div>
@@ -479,45 +759,71 @@ export default function LoginPage() {
                   <AnimatePresence>
                     {error && (
                       <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: "auto" }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="overflow-hidden"
+                        initial={{ opacity: 0, y: -8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0 }}
+                        className="flex items-start gap-2.5 px-4 py-3 rounded-xl text-sm"
+                        style={{
+                          background: "rgba(231,76,60,0.07)",
+                          border: "1px solid rgba(231,76,60,0.2)",
+                          color: "#c0392b",
+                        }}
                       >
-                        <div className="flex items-start gap-2.5 px-4 py-3 rounded-xl bg-[var(--color-red)]/8 border border-[var(--color-red)]/20">
-                          <AlertCircle className="w-4 h-4 text-[var(--color-red)] flex-shrink-0 mt-0.5" />
-                          <p className="text-sm text-[var(--color-red)]">{error}</p>
-                        </div>
+                        <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                        <span>{error}</span>
                       </motion.div>
                     )}
                     {successMsg && (
                       <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: "auto" }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="overflow-hidden"
+                        initial={{ opacity: 0, y: -8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0 }}
+                        className="flex items-start gap-2.5 px-4 py-3 rounded-xl text-sm"
+                        style={{
+                          background: "rgba(39,174,96,0.07)",
+                          border: "1px solid rgba(39,174,96,0.2)",
+                          color: "#1e8449",
+                        }}
                       >
-                        <div className="flex items-start gap-2.5 px-4 py-3 rounded-xl bg-green-50 border border-green-200">
-                          <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
-                          <p className="text-sm text-green-700">{successMsg}</p>
-                        </div>
+                        <CheckCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                        <span>{successMsg}</span>
                       </motion.div>
                     )}
                   </AnimatePresence>
 
-                  <motion.button
+                  <button
                     type="submit"
-                    disabled={loading || !!successMsg}
-                    whileHover={{ scale: loading ? 1 : 1.01 }}
-                    whileTap={{ scale: loading ? 1 : 0.98 }}
-                    className="w-full flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-[var(--color-navy)] text-white text-sm font-semibold hover:bg-[var(--color-navy)]/90 disabled:opacity-60 disabled:cursor-not-allowed transition-all shadow-[0_4px_16px_-4px_rgba(30,58,95,0.4)] focus:outline-none focus:ring-2 focus:ring-[var(--color-gold)]/50"
+                    disabled={loading}
+                    className="w-full flex items-center justify-center gap-2.5 py-3.5 rounded-xl font-semibold text-sm transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
+                    style={{
+                      background:
+                        "linear-gradient(135deg, #c8a96e 0%, #b8944f 100%)",
+                      color: "#1a2a3a",
+                      boxShadow:
+                        "0 4px 20px rgba(200,169,110,0.35), 0 1px 3px rgba(200,169,110,0.2)",
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!loading) {
+                        e.currentTarget.style.transform = "translateY(-1px)";
+                        e.currentTarget.style.boxShadow =
+                          "0 8px 28px rgba(200,169,110,0.45), 0 2px 6px rgba(200,169,110,0.2)";
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = "";
+                      e.currentTarget.style.boxShadow =
+                        "0 4px 20px rgba(200,169,110,0.35), 0 1px 3px rgba(200,169,110,0.2)";
+                    }}
                   >
                     {loading ? (
                       <>
-                        <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                        </svg>
+                        <span
+                          className="w-4 h-4 border-2 rounded-full animate-spin"
+                          style={{
+                            borderColor: "rgba(26,42,58,0.3)",
+                            borderTopColor: "#1a2a3a",
+                          }}
+                        />
                         Sending...
                       </>
                     ) : (
@@ -526,20 +832,31 @@ export default function LoginPage() {
                         <ArrowRight className="w-4 h-4" />
                       </>
                     )}
-                  </motion.button>
+                  </button>
 
                   <button
                     type="button"
-                    onClick={() => switchMode("login")}
-                    className="w-full text-center text-sm text-[var(--color-navy)]/60 hover:text-[var(--color-navy)] transition-colors py-2"
+                    onClick={() => {
+                      setMode("login");
+                      setError(null);
+                      setSuccessMsg(null);
+                    }}
+                    className="w-full text-sm font-medium py-2.5 rounded-xl transition-all duration-150"
+                    style={{ color: "#5a6a7a" }}
+                    onMouseEnter={(e) =>
+                      (e.currentTarget.style.color = "#1e3a5f")
+                    }
+                    onMouseLeave={(e) =>
+                      (e.currentTarget.style.color = "#5a6a7a")
+                    }
                   >
-                    Back to Sign In
+                    &larr; Back to Sign In
                   </button>
                 </form>
               </motion.div>
             )}
           </AnimatePresence>
-        </div>
+        </motion.div>
       </div>
     </div>
   );
