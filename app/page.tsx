@@ -140,20 +140,14 @@ export default function HomePage() {
               backgroundImage:
                 "radial-gradient(circle at 1px 1px, var(--brand-gold) 1px, transparent 0)",
               backgroundSize: "32px 32px",
-            }}
-          />
+            }} />
           {/* Gradient glow */}
           <div className="absolute top-0 right-0 w-[600px] h-[600px] rounded-full bg-[var(--brand-gold)]/10 blur-[120px] pointer-events-none" />
           <div className="absolute bottom-0 left-0 w-[400px] h-[400px] rounded-full bg-[var(--brand-gold)]/5 blur-[100px] pointer-events-none" />
 
           <div className="relative z-10 max-w-7xl mx-auto px-6 lg:px-12 py-24 grid lg:grid-cols-2 gap-16 items-center">
             {/* Left: copy */}
-            <motion.div
-              variants={staggerContainer}
-              initial="hidden"
-              animate="visible"
-              className="space-y-8"
-            >
+            <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="space-y-8">
               <motion.div variants={fadeInUp}>
                 <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-[var(--brand-gold)]/30 bg-[var(--brand-gold)]/10 text-[var(--brand-gold)] text-xs font-semibold tracking-wide uppercase">
                   <BookMarked className="h-3.5 w-3.5" aria-hidden="true" />
@@ -164,31 +158,24 @@ export default function HomePage() {
               <motion.h1
                 variants={fadeInUp}
                 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white leading-tight tracking-tight text-balance"
-              >
+                style={{
+                  color: "#84cc16"
+                }}>
                 {t("hero.headline1")}{" "}
                 <span className="text-[var(--brand-gold)]">{t("hero.headline2")}</span>{" "}
                 {t("hero.headline3")}
               </motion.h1>
 
-              <motion.p
-                variants={fadeInUp}
-                className="text-lg text-white/70 leading-relaxed max-w-lg text-pretty"
-              >
+              <motion.p variants={fadeInUp} className="text-lg text-white/70 leading-relaxed max-w-lg text-pretty">
                 {t("hero.subheadline")}
               </motion.p>
 
               <motion.div variants={fadeInUp} className="flex flex-wrap gap-4">
-                <Link
-                  href="/login"
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[var(--brand-gold)] text-[var(--brand-dark)] font-semibold text-sm hover:bg-[var(--brand-gold)]/90 transition-all duration-300 shadow-[0_4px_24px_rgba(200,169,110,0.35)] hover:shadow-[0_6px_32px_rgba(200,169,110,0.5)] hover:-translate-y-0.5"
-                >
+                <Link href="/login" className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-[var(--brand-gold)] text-[var(--brand-dark)] font-semibold text-sm hover:bg-[var(--brand-gold)]/90 transition-all duration-300 shadow-[0_4px_24px_rgba(200,169,110,0.35)] hover:shadow-[0_6px_32px_rgba(200,169,110,0.5)] hover:-translate-y-0.5">
                   {t("hero.cta_primary")}
                   <ArrowRight className="h-4 w-4" aria-hidden="true" />
                 </Link>
-                <Link
-                  href="/books/search"
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl border border-white/20 text-white font-semibold text-sm hover:bg-white/10 hover:border-white/40 transition-all duration-300"
-                >
+                <Link href="/books/search" className="inline-flex items-center gap-2 px-6 py-3 rounded-xl border border-white/20 text-white font-semibold text-sm hover:bg-white/10 hover:border-white/40 transition-all duration-300">
                   <Search className="h-4 w-4" aria-hidden="true" />
                   {t("hero.cta_secondary")}
                 </Link>
@@ -199,22 +186,15 @@ export default function HomePage() {
                   t("hero.trust1"),
                   t("hero.trust2"),
                   t("hero.trust3"),
-                ].map((item) => (
-                  <div key={item} className="flex items-center gap-1.5 text-white/60 text-xs">
-                    <CheckCircle className="h-3.5 w-3.5 text-[var(--brand-gold)]" aria-hidden="true" />
-                    {item}
-                  </div>
-                ))}
+                ].map((item) => (<div key={item} className="flex items-center gap-1.5 text-white/60 text-xs">
+                  <CheckCircle className="h-3.5 w-3.5 text-[var(--brand-gold)]" aria-hidden="true" />
+                  {item}
+                </div>))}
               </motion.div>
             </motion.div>
 
             {/* Right: mock dashboard card */}
-            <motion.div
-              variants={scaleIn}
-              initial="hidden"
-              animate="visible"
-              className="hidden lg:block"
-            >
+            <motion.div variants={scaleIn} initial="hidden" animate="visible" className="hidden lg:block">
               <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm p-6 shadow-[0_8px_48px_rgba(0,0,0,0.4)] space-y-5">
                 {/* Header */}
                 <div className="flex items-center justify-between">
@@ -234,15 +214,10 @@ export default function HomePage() {
                     { label: t("hero.card_stat1_label"), value: "142", color: "text-[var(--brand-gold)]" },
                     { label: t("hero.card_stat2_label"), value: "18", color: "text-red-400" },
                     { label: t("hero.card_stat3_label"), value: "PKR 2,340", color: "text-amber-400" },
-                  ].map((s) => (
-                    <div
-                      key={s.label}
-                      className="rounded-xl bg-white/5 border border-white/8 p-3 text-center"
-                    >
-                      <p className={cn("text-xl font-bold", s.color)}>{s.value}</p>
-                      <p className="text-white/50 text-[10px] mt-0.5 leading-tight">{s.label}</p>
-                    </div>
-                  ))}
+                  ].map((s) => (<div key={s.label} className="rounded-xl bg-white/5 border border-white/8 p-3 text-center">
+                    <p className={cn("text-xl font-bold", s.color)}>{s.value}</p>
+                    <p className="text-white/50 text-[10px] mt-0.5 leading-tight">{s.label}</p>
+                  </div>))}
                 </div>
 
                 {/* Recent activity */}
@@ -253,10 +228,7 @@ export default function HomePage() {
                     { action: t("hero.activity2_action"), book: t("hero.activity2_book"), time: "15m ago", type: "return" },
                     { action: t("hero.activity3_action"), book: t("hero.activity3_book"), time: "1h ago", type: "fine" },
                   ].map((item, i) => (
-                    <div
-                      key={i}
-                      className="flex items-center justify-between rounded-lg bg-white/5 px-3 py-2"
-                    >
+                    <div key={i} className="flex items-center justify-between rounded-lg bg-white/5 px-3 py-2">
                       <div className="flex items-center gap-2.5">
                         <span
                           className={cn(
@@ -266,8 +238,7 @@ export default function HomePage() {
                               : item.type === "return"
                               ? "bg-emerald-400"
                               : "bg-red-400"
-                          )}
-                        />
+                          )} />
                         <div>
                           <p className="text-white/80 text-xs font-medium">{item.action}</p>
                           <p className="text-white/40 text-[10px]">{item.book}</p>
@@ -282,22 +253,13 @@ export default function HomePage() {
           </div>
         </section>
       </Reveal>
-
       {/* ── Stats Bar ────────────────────────────────────────────────────── */}
       <Reveal>
         <section className="bg-[var(--brand-cream)] border-y border-[var(--brand-gold)]/20">
           <div className="max-w-7xl mx-auto px-6 lg:px-12 py-12">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-8">
               {STATS.map((stat, i) => (
-                <motion.div
-                  key={stat.label}
-                  variants={fadeInUp}
-                  initial="hidden"
-                  whileInView="visible"
-                  viewport={{ once: true }}
-                  transition={{ delay: i * 0.08 }}
-                  className="text-center"
-                >
+                <motion.div key={stat.label} variants={fadeInUp} initial="hidden" whileInView="visible" viewport={{ once: true }} transition={{ delay: i * 0.08 }} className="text-center">
                   <p className="text-3xl font-bold text-[var(--brand-dark)] tracking-tight">
                     {stat.value}
                   </p>
@@ -308,7 +270,6 @@ export default function HomePage() {
           </div>
         </section>
       </Reveal>
-
       {/* ── Features ─────────────────────────────────────────────────────── */}
       <Reveal>
         <section id="features" className="bg-white py-24 md:py-32">
@@ -328,10 +289,7 @@ export default function HomePage() {
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {FEATURES.map((feat, i) => (
                 <Reveal key={feat.title} delay={i * 0.07}>
-                  <motion.div
-                    whileHover={{ y: -4, transition: { duration: 0.2 } }}
-                    className="group rounded-2xl border border-[var(--brand-dark)]/8 bg-[var(--brand-cream)]/50 p-6 hover:border-[var(--brand-gold)]/40 hover:bg-[var(--brand-cream)] hover:shadow-[0_4px_24px_rgba(30,58,95,0.08)] transition-all duration-300"
-                  >
+                  <motion.div whileHover={{ y: -4, transition: { duration: 0.2 } }} className="group rounded-2xl border border-[var(--brand-dark)]/8 bg-[var(--brand-cream)]/50 p-6 hover:border-[var(--brand-gold)]/40 hover:bg-[var(--brand-cream)] hover:shadow-[0_4px_24px_rgba(30,58,95,0.08)] transition-all duration-300">
                     <div className="h-11 w-11 rounded-xl bg-[var(--brand-dark)] flex items-center justify-center mb-4 group-hover:bg-[var(--brand-gold)] transition-colors duration-300">
                       <feat.icon className="h-5 w-5 text-white group-hover:text-[var(--brand-dark)] transition-colors duration-300" aria-hidden="true" />
                     </div>
@@ -344,16 +302,15 @@ export default function HomePage() {
           </div>
         </section>
       </Reveal>
-
       {/* ── How It Works ─────────────────────────────────────────────────── */}
       <Reveal>
         <section id="how-it-works" className="bg-[var(--brand-dark)] py-24 md:py-32 relative overflow-hidden">
-          <div className="absolute inset-0 opacity-[0.03]"
+          <div
+            className="absolute inset-0 opacity-[0.03]"
             style={{
               backgroundImage: "radial-gradient(circle at 1px 1px, white 1px, transparent 0)",
               backgroundSize: "40px 40px",
-            }}
-          />
+            }} />
           <div className="relative z-10 max-w-7xl mx-auto px-6 lg:px-12">
             <div className="text-center max-w-2xl mx-auto mb-16">
               <span className="text-xs font-semibold uppercase tracking-widest text-[var(--brand-gold)]">
@@ -389,7 +346,6 @@ export default function HomePage() {
           </div>
         </section>
       </Reveal>
-
       {/* ── Admin Capabilities (split layout) ────────────────────────────── */}
       <Reveal>
         <section id="admin" className="bg-white py-24 md:py-32">
@@ -409,14 +365,7 @@ export default function HomePage() {
                   </div>
                   <div className="space-y-3">
                     {ADMIN_CAPABILITIES.map((cap, i) => (
-                      <motion.div
-                        key={i}
-                        initial={{ opacity: 0, x: -12 }}
-                        whileInView={{ opacity: 1, x: 0 }}
-                        viewport={{ once: true }}
-                        transition={{ delay: i * 0.07, duration: 0.4, ease: "easeOut" }}
-                        className="flex items-start gap-3 rounded-xl bg-white border border-[var(--brand-dark)]/6 px-4 py-3"
-                      >
+                      <motion.div key={i} initial={{ opacity: 0, x: -12 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.07, duration: 0.4, ease: "easeOut" }} className="flex items-start gap-3 rounded-xl bg-white border border-[var(--brand-dark)]/6 px-4 py-3">
                         <CheckCircle className="h-4 w-4 text-[var(--brand-gold)] flex-shrink-0 mt-0.5" aria-hidden="true" />
                         <span className="text-sm text-[var(--brand-dark)]/80">{cap}</span>
                       </motion.div>
@@ -440,10 +389,7 @@ export default function HomePage() {
                   {t("admin.body2")}
                 </p>
                 <div className="flex flex-wrap gap-4 pt-2">
-                  <Link
-                    href="/admin/dashboard"
-                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[var(--brand-dark)] text-white text-sm font-semibold hover:bg-[var(--brand-dark)]/90 transition-all duration-300 hover:-translate-y-0.5 shadow-[0_4px_16px_rgba(30,58,95,0.25)]"
-                  >
+                  <Link href="/admin/dashboard" className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[var(--brand-dark)] text-white text-sm font-semibold hover:bg-[var(--brand-dark)]/90 transition-all duration-300 hover:-translate-y-0.5 shadow-[0_4px_16px_rgba(30,58,95,0.25)]">
                     <UserCheck className="h-4 w-4" aria-hidden="true" />
                     {t("admin.cta")}
                   </Link>
@@ -453,7 +399,6 @@ export default function HomePage() {
           </div>
         </section>
       </Reveal>
-
       {/* ── Testimonials ─────────────────────────────────────────────────── */}
       <Reveal>
         <section id="testimonials" className="bg-[var(--brand-cream)] py-24 md:py-32">
@@ -470,10 +415,7 @@ export default function HomePage() {
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {TESTIMONIALS.map((t_item, i) => (
                 <Reveal key={t_item.name} delay={i * 0.1}>
-                  <motion.div
-                    whileHover={{ y: -4, transition: { duration: 0.2 } }}
-                    className="rounded-2xl border border-[var(--brand-dark)]/8 bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_-8px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_32px_rgba(30,58,95,0.12)] transition-all duration-300"
-                  >
+                  <motion.div whileHover={{ y: -4, transition: { duration: 0.2 } }} className="rounded-2xl border border-[var(--brand-dark)]/8 bg-white p-6 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_-8px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_32px_rgba(30,58,95,0.12)] transition-all duration-300">
                     <div className="flex gap-1 mb-4">
                       {Array.from({ length: 5 }).map((_, si) => (
                         <Star key={si} className="h-4 w-4 fill-[var(--brand-gold)] text-[var(--brand-gold)]" aria-hidden="true" />
@@ -498,7 +440,6 @@ export default function HomePage() {
           </div>
         </section>
       </Reveal>
-
       {/* ── CTA Banner ───────────────────────────────────────────────────── */}
       <Reveal>
         <section id="get-started" className="bg-[var(--brand-dark)] py-20 md:py-28 relative overflow-hidden">
@@ -515,17 +456,11 @@ export default function HomePage() {
               {t("cta.subheading")}
             </p>
             <div className="flex flex-wrap justify-center gap-4">
-              <Link
-                href="/login"
-                className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl bg-[var(--brand-gold)] text-[var(--brand-dark)] font-bold text-sm hover:bg-[var(--brand-gold)]/90 transition-all duration-300 shadow-[0_4px_24px_rgba(200,169,110,0.4)] hover:shadow-[0_6px_32px_rgba(200,169,110,0.55)] hover:-translate-y-0.5"
-              >
+              <Link href="/login" className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl bg-[var(--brand-gold)] text-[var(--brand-dark)] font-bold text-sm hover:bg-[var(--brand-gold)]/90 transition-all duration-300 shadow-[0_4px_24px_rgba(200,169,110,0.4)] hover:shadow-[0_6px_32px_rgba(200,169,110,0.55)] hover:-translate-y-0.5">
                 {t("cta.primary")}
                 <ArrowRight className="h-4 w-4" aria-hidden="true" />
               </Link>
-              <Link
-                href="/books/search"
-                className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl border border-white/20 text-white font-semibold text-sm hover:bg-white/10 hover:border-white/40 transition-all duration-300"
-              >
+              <Link href="/books/search" className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl border border-white/20 text-white font-semibold text-sm hover:bg-white/10 hover:border-white/40 transition-all duration-300">
                 <Search className="h-4 w-4" aria-hidden="true" />
                 {t("cta.secondary")}
               </Link>
