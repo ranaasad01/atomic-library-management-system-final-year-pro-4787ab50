@@ -36,7 +36,7 @@
     "trust2": "Production Ready",
     "trust3": "Open Source"
   },
-  "login-form": [
+  "login-form-section": [
     "Email address — use the address registered with the library office",
     "Password — minimum 8 characters; contact your librarian if you have forgotten your credentials",
     "Remember me — keeps your session active for 7 days on trusted devices",

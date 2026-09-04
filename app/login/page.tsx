@@ -4,6 +4,7 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Mail, Lock, Eye, EyeOff, BookOpen, Users, Shield, ArrowRight, AlertCircle, CheckCircle, ChevronDown, Sparkles } from 'lucide-react';
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { fadeInUp, scaleIn } from "@/lib/motion";
 import { BRAND } from "@/lib/data";
@@ -129,733 +130,554 @@ export default function LoginPage() {
       >
         {/* Decorative grid */}
         <div
-          className="absolute inset-0 pointer-events-none"
+          className="absolute inset-0 opacity-[0.04]"
           style={{
             backgroundImage:
-              "linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px)",
-            backgroundSize: "48px 48px",
+              "linear-gradient(rgba(200,169,110,0.6) 1px, transparent 1px), linear-gradient(90deg, rgba(200,169,110,0.6) 1px, transparent 1px)",
+            backgroundSize: "40px 40px",
           }}
         />
-        {/* Gold glow top-right */}
+        {/* Glow orbs */}
         <div
-          className="absolute -top-40 -right-40 w-[480px] h-[480px] rounded-full pointer-events-none"
-          style={{
-            background:
-              "radial-gradient(circle, rgba(200,169,110,0.18) 0%, transparent 70%)",
-          }}
+          className="absolute top-1/4 -right-20 w-80 h-80 rounded-full opacity-20 blur-3xl"
+          style={{ background: "radial-gradient(circle, #c8a96e, transparent)" }}
         />
-        {/* Gold glow bottom-left */}
         <div
-          className="absolute -bottom-40 -left-40 w-[400px] h-[400px] rounded-full pointer-events-none"
-          style={{
-            background:
-              "radial-gradient(circle, rgba(200,169,110,0.12) 0%, transparent 70%)",
-          }}
-        />
-        {/* Subtle horizontal rule accent */}
-        <div
-          className="absolute left-0 top-1/2 w-full h-px pointer-events-none"
-          style={{
-            background:
-              "linear-gradient(90deg, transparent, rgba(200,169,110,0.15), transparent)",
-          }}
+          className="absolute bottom-1/4 -left-10 w-60 h-60 rounded-full opacity-10 blur-3xl"
+          style={{ background: "radial-gradient(circle, #2a5080, transparent)" }}
         />
 
-        {/* Logo */}
+        {/* Brand mark */}
         <div className="relative z-10">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 mb-12">
             <div
-              className="w-11 h-11 rounded-2xl flex items-center justify-center shadow-lg"
+              className="w-11 h-11 rounded-xl flex items-center justify-center"
               style={{
-                background: "linear-gradient(135deg, #c8a96e, #b8944f)",
-                boxShadow: "0 4px 20px rgba(200,169,110,0.35)",
+                background: "linear-gradient(135deg, #c8a96e 0%, #b8944f 100%)",
+                boxShadow: "0 4px 16px rgba(200,169,110,0.4)",
               }}
             >
               <BookOpen className="w-5 h-5 text-white" />
             </div>
             <div>
-              <div className="text-white font-bold text-base leading-tight tracking-tight">
+              <span className="text-white font-bold text-base block leading-tight tracking-tight">
                 {BRAND.shortName}
-              </div>
-              <div className="text-white/40 text-[11px] tracking-widest uppercase">
+              </span>
+              <span className="text-[#c8a96e] text-[10px] uppercase tracking-widest font-medium">
                 {BRAND.project}
-              </div>
+              </span>
             </div>
           </div>
-        </div>
 
-        {/* Main content */}
-        <div className="relative z-10">
           <motion.div
-            initial={{ opacity: 0, y: 32 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.65, ease: "easeOut" }}
+            variants={fadeInUp}
+            initial="hidden"
+            animate="visible"
           >
-            {/* Badge */}
-            <span
-              className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold mb-8"
-              style={{
-                background: "rgba(200,169,110,0.18)",
-                border: "1px solid rgba(200,169,110,0.35)",
-                color: "#e8c98e",
-              }}
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              NCBA&amp;E — Final Year Project 2026
-            </span>
+            <div className="inline-flex items-center gap-2 bg-white/10 border border-white/15 rounded-full px-3 py-1.5 mb-6">
+              <Sparkles className="w-3.5 h-3.5 text-[#c8a96e]" />
+              <span className="text-white/80 text-xs font-medium">
+                NCBA&amp;E Final Year Project 2026
+              </span>
+            </div>
 
-            <h1 className="text-5xl font-bold text-white mb-5 leading-[1.1] tracking-tight">
-              Welcome to{" "}
+            <h1 className="text-4xl font-bold text-white leading-tight tracking-tight mb-4">
+              Your Library,
               <br />
               <span
                 style={{
-                  background:
-                    "linear-gradient(135deg, #c8a96e 0%, #e8d4a0 50%, #c8a96e 100%)",
+                  background: "linear-gradient(90deg, #c8a96e, #e8c98e)",
                   WebkitBackgroundClip: "text",
                   WebkitTextFillColor: "transparent",
-                  backgroundClip: "text",
                 }}
               >
-                the Library
+                Digitally Organized
               </span>
             </h1>
-
-            <p className="text-white/55 text-lg leading-relaxed mb-12 max-w-sm">
-              Your institutional gateway to library resources. Books, members,
-              transactions, and more — all in one place.
+            <p className="text-white/60 text-base leading-relaxed max-w-sm">
+              A modern MERN-stack solution for seamless library management.
+              Secure, fast, and built for institutional use.
             </p>
-
-            {/* Feature list */}
-            <div className="space-y-4">
-              {FEATURES.map((f, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, x: -24 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.25 + i * 0.12, duration: 0.45, ease: "easeOut" }}
-                  className="flex items-center gap-3.5"
-                >
-                  <div
-                    className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-                    style={{
-                      background: "rgba(200,169,110,0.14)",
-                      border: "1px solid rgba(200,169,110,0.28)",
-                    }}
-                  >
-                    <f.icon className="w-4 h-4" style={{ color: "#c8a96e" }} />
-                  </div>
-                  <span className="text-white/65 text-sm leading-snug">
-                    {f.text}
-                  </span>
-                </motion.div>
-              ))}
-            </div>
           </motion.div>
         </div>
 
-        {/* Bottom info */}
-        <div className="relative z-10 flex items-center gap-3">
-          <div
-            className="h-px flex-1"
-            style={{
-              background:
-                "linear-gradient(90deg, rgba(200,169,110,0.3), transparent)",
-            }}
-          />
-          <p className="text-white/30 text-xs whitespace-nowrap">
-            {BRAND.institution} &middot; {BRAND.year}
-          </p>
+        {/* Feature list */}
+        <div className="relative z-10 space-y-4">
+          {FEATURES.map((f, i) => (
+            <motion.div
+              key={i}
+              variants={fadeInUp}
+              initial="hidden"
+              animate="visible"
+              transition={{ delay: 0.15 + i * 0.1 }}
+              className="flex items-center gap-3"
+            >
+              <div
+                className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                style={{ background: "rgba(200,169,110,0.15)" }}
+              >
+                <f.icon className="w-4 h-4 text-[#c8a96e]" />
+              </div>
+              <span className="text-white/70 text-sm">{f.text}</span>
+            </motion.div>
+          ))}
+
+          <div className="pt-6 border-t border-white/10">
+            <p className="text-white/35 text-xs">
+              &copy; 2026 {BRAND.institution}
+            </p>
+          </div>
         </div>
       </div>
 
       {/* ── Right panel — form ────────────────────────────────────────── */}
-      <div className="flex-1 flex items-center justify-center p-6 lg:p-14 relative overflow-hidden">
-        {/* Subtle background texture */}
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            backgroundImage:
-              "radial-gradient(circle at 70% 20%, rgba(200,169,110,0.07) 0%, transparent 55%), radial-gradient(circle at 20% 80%, rgba(30,58,95,0.06) 0%, transparent 50%)",
-          }}
-        />
-
+      <div className="flex-1 flex items-center justify-center p-6 lg:p-12">
         <motion.div
           variants={scaleIn}
           initial="hidden"
           animate="visible"
-          className="w-full max-w-[420px] relative z-10"
+          className="w-full max-w-md"
         >
-          {/* Mobile logo */}
-          <div className="flex lg:hidden items-center gap-2.5 mb-10">
+          {/* Mobile brand */}
+          <div className="flex lg:hidden items-center gap-2 mb-8">
             <div
-              className="w-10 h-10 rounded-xl flex items-center justify-center"
+              className="w-9 h-9 rounded-lg flex items-center justify-center"
               style={{
-                background: "linear-gradient(135deg, #1e3a5f, #2a5080)",
-                boxShadow: "0 4px 16px rgba(30,58,95,0.25)",
+                background: "linear-gradient(135deg, #c8a96e 0%, #b8944f 100%)",
               }}
             >
-              <BookOpen className="w-5 h-5 text-white" />
+              <BookOpen className="w-4 h-4 text-white" />
             </div>
-            <div>
-              <div
-                className="font-bold text-sm"
-                style={{ color: "#1e3a5f" }}
-              >
-                {BRAND.shortName}
-              </div>
-              <div className="text-xs" style={{ color: "#5a6a7a" }}>
-                {BRAND.project}
-              </div>
-            </div>
+            <span className="font-bold text-[var(--primary)] text-base">
+              {BRAND.shortName}
+            </span>
           </div>
 
-          <AnimatePresence mode="wait">
-            {mode === "login" ? (
-              <motion.div
-                key="login"
-                variants={fadeInUp}
-                initial="hidden"
-                animate="visible"
-                exit={{ opacity: 0, y: -12, transition: { duration: 0.2 } }}
-              >
-                {/* Heading */}
-                <div className="mb-8">
-                  <h2
-                    className="text-3xl font-bold mb-2 tracking-tight"
-                    style={{ color: "#1e3a5f" }}
-                  >
-                    Sign In
-                  </h2>
-                  <p className="text-sm leading-relaxed" style={{ color: "#5a6a7a" }}>
-                    Access your library account to manage books and transactions.
-                  </p>
-                </div>
+          {/* Card */}
+          <div
+            className="bg-white rounded-2xl p-8"
+            style={{
+              boxShadow:
+                "0 2px 8px rgba(30,58,95,0.08), 0 16px 48px rgba(30,58,95,0.12)",
+              border: "1px solid var(--border)",
+            }}
+          >
+            <AnimatePresence mode="wait">
+              {mode === "login" ? (
+                <motion.div
+                  key="login"
+                  variants={fadeInUp}
+                  initial="hidden"
+                  animate="visible"
+                  exit={{ opacity: 0, y: -8 }}
+                >
+                  {/* Header */}
+                  <div className="mb-7">
+                    <h2 className="text-2xl font-bold text-[var(--primary)] tracking-tight mb-1">
+                      Welcome back
+                    </h2>
+                    <p className="text-sm text-[var(--muted-foreground)]">
+                      Sign in to your library account
+                    </p>
+                  </div>
 
-                {/* Role selector */}
-                <div className="mb-6">
-                  <label
-                    className="block text-xs font-semibold uppercase tracking-wider mb-2"
-                    style={{ color: "#1e3a5f" }}
-                  >
-                    Sign in as
-                  </label>
-                  <div className="relative">
-                    <button
-                      type="button"
-                      onClick={() => setRoleDropdownOpen(!roleDropdownOpen)}
-                      className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 focus-visible:outline-none"
-                      style={{
-                        background: "white",
-                        border: "1.5px solid var(--border)",
-                        color: "#1e3a5f",
-                        boxShadow: roleDropdownOpen
-                          ? "0 0 0 3px rgba(200,169,110,0.18)"
-                          : "0 1px 3px rgba(30,58,95,0.06)",
-                      }}
-                    >
-                      <span>
-                        {ROLE_OPTIONS.find((r) => r.value === role)?.label}
-                      </span>
-                      <ChevronDown
-                        className={`w-4 h-4 transition-transform duration-200 ${
-                          roleDropdownOpen ? "rotate-180" : ""
-                        }`}
-                        style={{ color: "#5a6a7a" }}
-                      />
-                    </button>
+                  {/* Role selector */}
+                  <div className="mb-5">
+                    <label className="block text-xs font-semibold text-[var(--foreground)] uppercase tracking-wider mb-2">
+                      Sign in as
+                    </label>
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setRoleDropdownOpen((o) => !o)}
+                        className="w-full flex items-center justify-between px-4 py-3 rounded-xl border text-sm font-medium transition-all duration-200"
+                        style={{
+                          borderColor: roleDropdownOpen
+                            ? "var(--accent)"
+                            : "var(--border)",
+                          background: "var(--background)",
+                          color: "var(--foreground)",
+                        }}
+                      >
+                        <span>
+                          {ROLE_OPTIONS.find((r) => r.value === role)?.label}
+                        </span>
+                        <ChevronDown
+                          className={`w-4 h-4 text-[var(--muted-foreground)] transition-transform duration-200 ${
+                            roleDropdownOpen ? "rotate-180" : ""
+                          }`}
+                        />
+                      </button>
+                      <AnimatePresence>
+                        {roleDropdownOpen && (
+                          <motion.div
+                            initial={{ opacity: 0, y: -6, scale: 0.98 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: -6, scale: 0.98 }}
+                            transition={{ duration: 0.15 }}
+                            className="absolute top-full left-0 right-0 mt-1 bg-white rounded-xl border border-[var(--border)] shadow-lg z-20 overflow-hidden"
+                          >
+                            {ROLE_OPTIONS.map((opt) => (
+                              <button
+                                key={opt.value}
+                                type="button"
+                                onClick={() => {
+                                  setRole(opt.value);
+                                  setRoleDropdownOpen(false);
+                                }}
+                                className="w-full flex flex-col items-start px-4 py-3 text-left hover:bg-[var(--muted)] transition-colors"
+                              >
+                                <span
+                                  className="text-sm font-semibold"
+                                  style={{
+                                    color:
+                                      role === opt.value
+                                        ? "var(--accent)"
+                                        : "var(--foreground)",
+                                  }}
+                                >
+                                  {opt.label}
+                                </span>
+                                <span className="text-xs text-[var(--muted-foreground)]">
+                                  {opt.description}
+                                </span>
+                              </button>
+                            ))}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  </div>
 
-                    <AnimatePresence>
-                      {roleDropdownOpen && (
-                        <motion.div
-                          initial={{ opacity: 0, y: -6, scale: 0.98 }}
-                          animate={{ opacity: 1, y: 0, scale: 1 }}
-                          exit={{ opacity: 0, y: -6, scale: 0.98 }}
-                          transition={{ duration: 0.15 }}
-                          className="absolute top-full left-0 right-0 mt-1.5 rounded-xl overflow-hidden z-20"
+                  {/* Form */}
+                  <form onSubmit={handleLogin} className="space-y-4" noValidate>
+                    {/* Email */}
+                    <div>
+                      <label className="block text-xs font-semibold text-[var(--foreground)] uppercase tracking-wider mb-1.5">
+                        Email Address
+                      </label>
+                      <div className="relative">
+                        <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--muted-foreground)]" />
+                        <input
+                          type="email"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          onBlur={() =>
+                            setTouched((t) => ({ ...t, email: true }))
+                          }
+                          placeholder="you@example.com"
+                          className="w-full pl-10 pr-4 py-3 rounded-xl border text-sm transition-all duration-200 outline-none"
                           style={{
-                            background: "white",
-                            border: "1px solid var(--border)",
-                            boxShadow:
-                              "0 8px 32px -8px rgba(30,58,95,0.18), 0 2px 8px rgba(30,58,95,0.08)",
+                            borderColor: emailError
+                              ? "var(--destructive)"
+                              : "var(--border)",
+                            background: "var(--background)",
+                            color: "var(--foreground)",
+                          }}
+                          autoComplete="email"
+                        />
+                      </div>
+                      {emailError && (
+                        <p className="mt-1 text-xs text-[var(--destructive)] flex items-center gap-1">
+                          <AlertCircle className="w-3 h-3" />
+                          {emailError}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Password */}
+                    <div>
+                      <label className="block text-xs font-semibold text-[var(--foreground)] uppercase tracking-wider mb-1.5">
+                        Password
+                      </label>
+                      <div className="relative">
+                        <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--muted-foreground)]" />
+                        <input
+                          type={showPassword ? "text" : "password"}
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          onBlur={() =>
+                            setTouched((t) => ({ ...t, password: true }))
+                          }
+                          placeholder="••••••••"
+                          className="w-full pl-10 pr-11 py-3 rounded-xl border text-sm transition-all duration-200 outline-none"
+                          style={{
+                            borderColor: passwordError
+                              ? "var(--destructive)"
+                              : "var(--border)",
+                            background: "var(--background)",
+                            color: "var(--foreground)",
+                          }}
+                          autoComplete="current-password"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword((s) => !s)}
+                          className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors"
+                          aria-label={showPassword ? "Hide password" : "Show password"}
+                        >
+                          {showPassword ? (
+                            <EyeOff className="w-4 h-4" />
+                          ) : (
+                            <Eye className="w-4 h-4" />
+                          )}
+                        </button>
+                      </div>
+                      {passwordError && (
+                        <p className="mt-1 text-xs text-[var(--destructive)] flex items-center gap-1">
+                          <AlertCircle className="w-3 h-3" />
+                          {passwordError}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Forgot password */}
+                    <div className="flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMode("forgot");
+                          setError(null);
+                          setSuccessMsg(null);
+                        }}
+                        className="text-xs text-[var(--accent)] hover:text-[var(--accent-hover)] font-medium transition-colors"
+                      >
+                        Forgot password?
+                      </button>
+                    </div>
+
+                    {/* Error */}
+                    <AnimatePresence>
+                      {error && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -4 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0 }}
+                          className="flex items-start gap-2 p-3 rounded-xl text-sm"
+                          style={{
+                            background: "rgba(231,76,60,0.08)",
+                            border: "1px solid rgba(231,76,60,0.2)",
+                            color: "var(--destructive)",
                           }}
                         >
-                          {ROLE_OPTIONS.map((opt) => (
-                            <button
-                              key={opt.value}
-                              type="button"
-                              onClick={() => {
-                                setRole(opt.value);
-                                setRoleDropdownOpen(false);
-                              }}
-                              className="w-full flex flex-col items-start px-4 py-3.5 text-left transition-colors duration-150"
-                              style={{
-                                background:
-                                  role === opt.value
-                                    ? "rgba(200,169,110,0.08)"
-                                    : "transparent",
-                              }}
-                              onMouseEnter={(e) =>
-                                (e.currentTarget.style.background =
-                                  "rgba(200,169,110,0.08)")
-                              }
-                              onMouseLeave={(e) =>
-                                (e.currentTarget.style.background =
-                                  role === opt.value
-                                    ? "rgba(200,169,110,0.08)"
-                                    : "transparent")
-                              }
-                            >
-                              <span
-                                className="text-sm font-semibold"
-                                style={{ color: "#1e3a5f" }}
-                              >
-                                {opt.label}
-                              </span>
-                              <span
-                                className="text-xs mt-0.5"
-                                style={{ color: "#5a6a7a" }}
-                              >
-                                {opt.description}
-                              </span>
-                            </button>
-                          ))}
+                          <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                          <span>{error}</span>
                         </motion.div>
                       )}
                     </AnimatePresence>
-                  </div>
-                </div>
 
-                <form onSubmit={handleLogin} className="space-y-5">
-                  {/* Email */}
-                  <div>
-                    <label
-                      className="block text-xs font-semibold uppercase tracking-wider mb-2"
-                      style={{ color: "#1e3a5f" }}
+                    {/* Submit */}
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-sm text-white transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
+                      style={{
+                        background: loading
+                          ? "var(--primary)"
+                          : "linear-gradient(135deg, #1e3a5f 0%, #2a5080 100%)",
+                        boxShadow: loading
+                          ? "none"
+                          : "0 4px 16px rgba(30,58,95,0.3)",
+                      }}
                     >
-                      Email Address
-                    </label>
-                    <div className="relative">
-                      <Mail
-                        className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none"
-                        style={{ color: "#5a6a7a" }}
-                      />
-                      <input
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        onBlur={() =>
-                          setTouched((t) => ({ ...t, email: true }))
-                        }
-                        placeholder="you@ncbae.edu.pk"
-                        className="w-full pl-10 pr-4 py-3 rounded-xl text-sm transition-all duration-200 outline-none"
-                        style={{
-                          background: "white",
-                          border: emailError
-                            ? "1.5px solid #e74c3c"
-                            : "1.5px solid var(--border)",
-                          color: "#1a2a3a",
-                          boxShadow: emailError
-                            ? "0 0 0 3px rgba(231,76,60,0.1)"
-                            : "0 1px 3px rgba(30,58,95,0.06)",
-                        }}
-                        onFocus={(e) => {
-                          if (!emailError)
-                            e.currentTarget.style.boxShadow =
-                              "0 0 0 3px rgba(200,169,110,0.18)";
-                          e.currentTarget.style.borderColor = emailError
-                            ? "#e74c3c"
-                            : "#c8a96e";
-                        }}
-                        onBlurCapture={(e) => {
-                          e.currentTarget.style.boxShadow = emailError
-                            ? "0 0 0 3px rgba(231,76,60,0.1)"
-                            : "0 1px 3px rgba(30,58,95,0.06)";
-                          e.currentTarget.style.borderColor = emailError
-                            ? "#e74c3c"
-                            : "var(--border)";
-                        }}
-                      />
-                    </div>
-                    {emailError && (
-                      <p className="mt-1.5 text-xs text-red-600 flex items-center gap-1">
-                        <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
-                        {emailError}
-                      </p>
-                    )}
-                  </div>
+                      {loading ? (
+                        <>
+                          <svg
+                            className="animate-spin w-4 h-4"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                            />
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8v8H4z"
+                            />
+                          </svg>
+                          Signing in...
+                        </>
+                      ) : (
+                        <>
+                          Sign In
+                          <ArrowRight className="w-4 h-4" />
+                        </>
+                      )}
+                    </button>
+                  </form>
 
-                  {/* Password */}
-                  <div>
-                    <label
-                      className="block text-xs font-semibold uppercase tracking-wider mb-2"
-                      style={{ color: "#1e3a5f" }}
+                  {/* Sign up link */}
+                  <div className="text-center mt-4 text-sm text-[var(--muted-foreground)]">
+                    Don&apos;t have an account?{" "}
+                    <Link
+                      href="/signup"
+                      className="text-[var(--accent)] hover:text-[var(--accent-hover)] font-medium underline-offset-2 hover:underline transition-colors"
                     >
-                      Password
-                    </label>
-                    <div className="relative">
-                      <Lock
-                        className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none"
-                        style={{ color: "#5a6a7a" }}
-                      />
-                      <input
-                        type={showPassword ? "text" : "password"}
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        onBlur={() =>
-                          setTouched((t) => ({ ...t, password: true }))
-                        }
-                        placeholder="••••••••"
-                        className="w-full pl-10 pr-12 py-3 rounded-xl text-sm transition-all duration-200 outline-none"
-                        style={{
-                          background: "white",
-                          border: passwordError
-                            ? "1.5px solid #e74c3c"
-                            : "1.5px solid var(--border)",
-                          color: "#1a2a3a",
-                          boxShadow: passwordError
-                            ? "0 0 0 3px rgba(231,76,60,0.1)"
-                            : "0 1px 3px rgba(30,58,95,0.06)",
-                        }}
-                        onFocus={(e) => {
-                          if (!passwordError)
-                            e.currentTarget.style.boxShadow =
-                              "0 0 0 3px rgba(200,169,110,0.18)";
-                          e.currentTarget.style.borderColor = passwordError
-                            ? "#e74c3c"
-                            : "#c8a96e";
-                        }}
-                        onBlurCapture={(e) => {
-                          e.currentTarget.style.boxShadow = passwordError
-                            ? "0 0 0 3px rgba(231,76,60,0.1)"
-                            : "0 1px 3px rgba(30,58,95,0.06)";
-                          e.currentTarget.style.borderColor = passwordError
-                            ? "#e74c3c"
-                            : "var(--border)";
-                        }}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3.5 top-1/2 -translate-y-1/2 p-0.5 rounded transition-colors duration-150"
-                        style={{ color: "#5a6a7a" }}
-                      >
-                        {showPassword ? (
-                          <EyeOff className="w-4 h-4" />
-                        ) : (
-                          <Eye className="w-4 h-4" />
-                        )}
-                      </button>
-                    </div>
-                    {passwordError && (
-                      <p className="mt-1.5 text-xs text-red-600 flex items-center gap-1">
-                        <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
-                        {passwordError}
-                      </p>
-                    )}
+                      Create Account
+                    </Link>
                   </div>
-
-                  {/* Forgot password */}
-                  <div className="flex justify-end">
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="forgot"
+                  variants={fadeInUp}
+                  initial="hidden"
+                  animate="visible"
+                  exit={{ opacity: 0, y: -8 }}
+                >
+                  {/* Header */}
+                  <div className="mb-7">
                     <button
                       type="button"
                       onClick={() => {
-                        setMode("forgot");
+                        setMode("login");
                         setError(null);
                         setSuccessMsg(null);
                       }}
-                      className="text-xs font-semibold uppercase tracking-wider hover:underline transition-all duration-150"
-                      style={{ color: "#c8a96e" }}
+                      className="text-xs text-[var(--muted-foreground)] hover:text-[var(--foreground)] flex items-center gap-1 mb-4 transition-colors"
                     >
-                      Forgot password?
+                      &larr; Back to sign in
                     </button>
+                    <h2 className="text-2xl font-bold text-[var(--primary)] tracking-tight mb-1">
+                      Reset Password
+                    </h2>
+                    <p className="text-sm text-[var(--muted-foreground)]">
+                      Enter your email and we&apos;ll send a reset link.
+                    </p>
                   </div>
 
-                  {/* Error */}
-                  <AnimatePresence>
-                    {error && (
-                      <motion.div
-                        initial={{ opacity: 0, y: -8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0 }}
-                        className="flex items-start gap-2.5 px-4 py-3 rounded-xl text-sm"
-                        style={{
-                          background: "rgba(231,76,60,0.07)",
-                          border: "1px solid rgba(231,76,60,0.2)",
-                          color: "#c0392b",
-                        }}
-                      >
-                        <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                        <span>{error}</span>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-
-                  {/* Submit */}
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full flex items-center justify-center gap-2.5 py-3.5 rounded-xl font-semibold text-sm transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
-                    style={{
-                      background:
-                        "linear-gradient(135deg, #1e3a5f 0%, #2a5080 100%)",
-                      color: "white",
-                      boxShadow:
-                        "0 4px 20px rgba(30,58,95,0.35), 0 1px 3px rgba(30,58,95,0.2)",
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!loading) {
-                        e.currentTarget.style.transform = "translateY(-1px)";
-                        e.currentTarget.style.boxShadow =
-                          "0 8px 28px rgba(30,58,95,0.4), 0 2px 6px rgba(30,58,95,0.2)";
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = "";
-                      e.currentTarget.style.boxShadow =
-                        "0 4px 20px rgba(30,58,95,0.35), 0 1px 3px rgba(30,58,95,0.2)";
-                    }}
+                  <form
+                    onSubmit={handleForgotPassword}
+                    className="space-y-4"
+                    noValidate
                   >
-                    {loading ? (
-                      <>
-                        <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        Signing in...
-                      </>
-                    ) : (
-                      <>
-                        Sign In
-                        <ArrowRight className="w-4 h-4" />
-                      </>
-                    )}
-                  </button>
-                </form>
-
-                {/* Divider */}
-                <div className="flex items-center gap-3 my-6">
-                  <div
-                    className="flex-1 h-px"
-                    style={{ background: "var(--border)" }}
-                  />
-                  <span className="text-xs" style={{ color: "#8a9aaa" }}>
-                    secured by JWT
-                  </span>
-                  <div
-                    className="flex-1 h-px"
-                    style={{ background: "var(--border)" }}
-                  />
-                </div>
-
-                {/* Trust badges */}
-                <div className="flex items-center justify-center gap-6">
-                  {[
-                    { icon: Shield, label: "JWT Auth" },
-                    { icon: BookOpen, label: "NCBA&E" },
-                    { icon: Users, label: "Role-Based" },
-                  ].map((b) => (
-                    <div
-                      key={b.label}
-                      className="flex flex-col items-center gap-1"
-                    >
-                      <div
-                        className="w-8 h-8 rounded-lg flex items-center justify-center"
-                        style={{
-                          background: "rgba(30,58,95,0.07)",
-                          border: "1px solid rgba(30,58,95,0.1)",
-                        }}
-                      >
-                        <b.icon
-                          className="w-3.5 h-3.5"
-                          style={{ color: "#1e3a5f" }}
+                    <div>
+                      <label className="block text-xs font-semibold text-[var(--foreground)] uppercase tracking-wider mb-1.5">
+                        Email Address
+                      </label>
+                      <div className="relative">
+                        <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--muted-foreground)]" />
+                        <input
+                          type="email"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          onBlur={() =>
+                            setTouched((t) => ({ ...t, email: true }))
+                          }
+                          placeholder="you@example.com"
+                          className="w-full pl-10 pr-4 py-3 rounded-xl border text-sm transition-all duration-200 outline-none"
+                          style={{
+                            borderColor: emailError
+                              ? "var(--destructive)"
+                              : "var(--border)",
+                            background: "var(--background)",
+                            color: "var(--foreground)",
+                          }}
+                          autoComplete="email"
                         />
                       </div>
-                      <span
-                        className="text-[10px] font-medium"
-                        style={{ color: "#8a9aaa" }}
-                      >
-                        {b.label}
-                      </span>
+                      {emailError && (
+                        <p className="mt-1 text-xs text-[var(--destructive)] flex items-center gap-1">
+                          <AlertCircle className="w-3 h-3" />
+                          {emailError}
+                        </p>
+                      )}
                     </div>
-                  ))}
-                </div>
-              </motion.div>
-            ) : (
-              <motion.div
-                key="forgot"
-                variants={fadeInUp}
-                initial="hidden"
-                animate="visible"
-                exit={{ opacity: 0, y: -12, transition: { duration: 0.2 } }}
-              >
-                {/* Heading */}
-                <div className="mb-8">
-                  <h2
-                    className="text-3xl font-bold mb-2 tracking-tight"
-                    style={{ color: "#1e3a5f" }}
-                  >
-                    Reset Password
-                  </h2>
-                  <p className="text-sm leading-relaxed" style={{ color: "#5a6a7a" }}>
-                    Enter your registered email to receive a password reset link.
-                  </p>
-                </div>
 
-                <form onSubmit={handleForgotPassword} className="space-y-5">
-                  <div>
-                    <label
-                      className="block text-xs font-semibold uppercase tracking-wider mb-2"
-                      style={{ color: "#1e3a5f" }}
-                    >
-                      Email Address
-                    </label>
-                    <div className="relative">
-                      <Mail
-                        className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none"
-                        style={{ color: "#5a6a7a" }}
-                      />
-                      <input
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        onBlur={() =>
-                          setTouched((t) => ({ ...t, email: true }))
-                        }
-                        placeholder="you@ncbae.edu.pk"
-                        className="w-full pl-10 pr-4 py-3 rounded-xl text-sm transition-all duration-200 outline-none"
-                        style={{
-                          background: "white",
-                          border: emailError
-                            ? "1.5px solid #e74c3c"
-                            : "1.5px solid var(--border)",
-                          color: "#1a2a3a",
-                          boxShadow: emailError
-                            ? "0 0 0 3px rgba(231,76,60,0.1)"
-                            : "0 1px 3px rgba(30,58,95,0.06)",
-                        }}
-                        onFocus={(e) => {
-                          if (!emailError)
-                            e.currentTarget.style.boxShadow =
-                              "0 0 0 3px rgba(200,169,110,0.18)";
-                          e.currentTarget.style.borderColor = emailError
-                            ? "#e74c3c"
-                            : "#c8a96e";
-                        }}
-                        onBlurCapture={(e) => {
-                          e.currentTarget.style.boxShadow = emailError
-                            ? "0 0 0 3px rgba(231,76,60,0.1)"
-                            : "0 1px 3px rgba(30,58,95,0.06)";
-                          e.currentTarget.style.borderColor = emailError
-                            ? "#e74c3c"
-                            : "var(--border)";
-                        }}
-                      />
-                    </div>
-                    {emailError && (
-                      <p className="mt-1.5 text-xs text-red-600 flex items-center gap-1">
-                        <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
-                        {emailError}
-                      </p>
-                    )}
-                  </div>
-
-                  <AnimatePresence>
-                    {error && (
-                      <motion.div
-                        initial={{ opacity: 0, y: -8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0 }}
-                        className="flex items-start gap-2.5 px-4 py-3 rounded-xl text-sm"
-                        style={{
-                          background: "rgba(231,76,60,0.07)",
-                          border: "1px solid rgba(231,76,60,0.2)",
-                          color: "#c0392b",
-                        }}
-                      >
-                        <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                        <span>{error}</span>
-                      </motion.div>
-                    )}
-                    {successMsg && (
-                      <motion.div
-                        initial={{ opacity: 0, y: -8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0 }}
-                        className="flex items-start gap-2.5 px-4 py-3 rounded-xl text-sm"
-                        style={{
-                          background: "rgba(39,174,96,0.07)",
-                          border: "1px solid rgba(39,174,96,0.2)",
-                          color: "#1e8449",
-                        }}
-                      >
-                        <CheckCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                        <span>{successMsg}</span>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full flex items-center justify-center gap-2.5 py-3.5 rounded-xl font-semibold text-sm transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
-                    style={{
-                      background:
-                        "linear-gradient(135deg, #c8a96e 0%, #b8944f 100%)",
-                      color: "#1a2a3a",
-                      boxShadow:
-                        "0 4px 20px rgba(200,169,110,0.35), 0 1px 3px rgba(200,169,110,0.2)",
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!loading) {
-                        e.currentTarget.style.transform = "translateY(-1px)";
-                        e.currentTarget.style.boxShadow =
-                          "0 8px 28px rgba(200,169,110,0.45), 0 2px 6px rgba(200,169,110,0.2)";
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = "";
-                      e.currentTarget.style.boxShadow =
-                        "0 4px 20px rgba(200,169,110,0.35), 0 1px 3px rgba(200,169,110,0.2)";
-                    }}
-                  >
-                    {loading ? (
-                      <>
-                        <span
-                          className="w-4 h-4 border-2 rounded-full animate-spin"
+                    <AnimatePresence>
+                      {error && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -4 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0 }}
+                          className="flex items-start gap-2 p-3 rounded-xl text-sm"
                           style={{
-                            borderColor: "rgba(26,42,58,0.3)",
-                            borderTopColor: "#1a2a3a",
+                            background: "rgba(231,76,60,0.08)",
+                            border: "1px solid rgba(231,76,60,0.2)",
+                            color: "var(--destructive)",
                           }}
-                        />
-                        Sending...
-                      </>
-                    ) : (
-                      <>
-                        Send Reset Link
-                        <ArrowRight className="w-4 h-4" />
-                      </>
-                    )}
-                  </button>
+                        >
+                          <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                          <span>{error}</span>
+                        </motion.div>
+                      )}
+                      {successMsg && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -4 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0 }}
+                          className="flex items-start gap-2 p-3 rounded-xl text-sm"
+                          style={{
+                            background: "rgba(39,174,96,0.08)",
+                            border: "1px solid rgba(39,174,96,0.2)",
+                            color: "var(--success)",
+                          }}
+                        >
+                          <CheckCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                          <span>{successMsg}</span>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setMode("login");
-                      setError(null);
-                      setSuccessMsg(null);
-                    }}
-                    className="w-full text-sm font-medium py-2.5 rounded-xl transition-all duration-150"
-                    style={{ color: "#5a6a7a" }}
-                    onMouseEnter={(e) =>
-                      (e.currentTarget.style.color = "#1e3a5f")
-                    }
-                    onMouseLeave={(e) =>
-                      (e.currentTarget.style.color = "#5a6a7a")
-                    }
-                  >
-                    &larr; Back to Sign In
-                  </button>
-                </form>
-              </motion.div>
-            )}
-          </AnimatePresence>
+                    <button
+                      type="submit"
+                      disabled={loading || !!successMsg}
+                      className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-semibold text-sm text-white transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
+                      style={{
+                        background:
+                          "linear-gradient(135deg, #1e3a5f 0%, #2a5080 100%)",
+                        boxShadow: "0 4px 16px rgba(30,58,95,0.3)",
+                      }}
+                    >
+                      {loading ? (
+                        <>
+                          <svg
+                            className="animate-spin w-4 h-4"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                            />
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8v8H4z"
+                            />
+                          </svg>
+                          Sending...
+                        </>
+                      ) : (
+                        "Send Reset Link"
+                      )}
+                    </button>
+                  </form>
+
+                  {/* Sign up link on forgot password screen too */}
+                  <div className="text-center mt-4 text-sm text-[var(--muted-foreground)]">
+                    Don&apos;t have an account?{" "}
+                    <Link
+                      href="/signup"
+                      className="text-[var(--accent)] hover:text-[var(--accent-hover)] font-medium underline-offset-2 hover:underline transition-colors"
+                    >
+                      Create Account
+                    </Link>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </motion.div>
       </div>
     </div>
