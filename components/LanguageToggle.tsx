@@ -1,24 +1,24 @@
-"use client";
+'use client';
 
-import { useSiteLocale } from "@/components/LocaleProvider";
-
-const LABELS: Record<string, string> = { en: "EN", es: "ES", fr: "FR", de: "DE", pt: "PT" };
+import { useState } from 'react';
+import { Globe } from 'lucide-react';
 
 export default function LanguageToggle() {
-  const { locale, setLocale, locales } = useSiteLocale();
-  if (locales.length < 2) return null;
+  const [lang, setLang] = useState('EN');
+
   return (
-    <div className="fixed bottom-5 left-5 z-50 flex gap-1 rounded-full border border-gray-200 bg-white/90 px-1 py-1 shadow-lg backdrop-blur">
-      {locales.map((l) => (
-        <button
-          key={l}
-          type="button"
-          onClick={() => setLocale(l)}
-          className={"rounded-full px-2.5 py-1 text-xs font-semibold transition-colors " + (locale === l ? "bg-black text-white" : "text-gray-700 hover:bg-gray-100")}
-        >
-          {LABELS[l] ?? l.toUpperCase()}
-        </button>
-      ))}
-    </div>
+    <button
+      onClick={() => setLang((l) => (l === 'EN' ? 'ES' : 'EN'))}
+      className="fixed bottom-6 right-6 z-50 flex items-center gap-1.5 px-3 py-2 rounded-full shadow-lg text-xs font-semibold transition-all duration-200 hover:scale-105"
+      style={{
+        background: 'var(--primary)',
+        color: '#fff',
+        border: '1px solid rgba(200,169,110,0.4)',
+      }}
+      aria-label="Toggle language"
+    >
+      <Globe className="h-3.5 w-3.5 text-[#c8a96e]" />
+      {lang}
+    </button>
   );
 }

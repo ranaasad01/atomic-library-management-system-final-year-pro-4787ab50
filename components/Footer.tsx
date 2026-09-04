@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
-import { useTranslations } from "next-intl";
 import { BRAND } from "@/lib/data";
 import { BookOpen, Mail, Phone, MapPin, ArrowUp, ChevronRight } from 'lucide-react';
 
@@ -33,8 +32,6 @@ const quickLinks = [
 ];
 
 export default function Footer() {
-  const t = useTranslations();
-  const navT = (t.raw("nav") as Record<string, string>) ?? {};
   const pathname = usePathname();
 
   const getNavHref = (href: string) => {
@@ -114,169 +111,99 @@ export default function Footer() {
               </p>
 
               <p className="text-white/65 text-sm leading-relaxed max-w-sm mb-6">
-                A comprehensive library management portal for {BRAND.institution}.
-                Manage books, members, issue and return workflows, and fine tracking
-                — all in one secure, role-aware system.
+                A comprehensive web-based Library Management System developed as a Final Year Project
+                for {BRAND.institution}, Lahore. Built with the MERN stack.
               </p>
 
-              {/* Contact info with icons */}
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center gap-2.5 group">
-                  <div className="w-7 h-7 rounded-lg bg-[var(--accent)]/10 flex items-center justify-center flex-shrink-0 group-hover:bg-[var(--accent)]/20 transition-colors duration-200">
-                    <MapPin className="w-3.5 h-3.5 text-[var(--accent)]" aria-hidden="true" />
-                  </div>
-                  <span className="text-white/60 text-xs leading-snug">
-                    National College of Business Administration &amp; Economics, Lahore
-                  </span>
+              {/* Contact info */}
+              <div className="space-y-2.5">
+                <div className="flex items-center gap-2.5 text-white/55 text-sm">
+                  <MapPin className="w-3.5 h-3.5 text-[var(--accent)]/70 flex-shrink-0" aria-hidden="true" />
+                  <span>NCBA&amp;E, Lahore, Pakistan</span>
                 </div>
-                <div className="flex items-center gap-2.5 group">
-                  <div className="w-7 h-7 rounded-lg bg-[var(--accent)]/10 flex items-center justify-center flex-shrink-0 group-hover:bg-[var(--accent)]/20 transition-colors duration-200">
-                    <Mail className="w-3.5 h-3.5 text-[var(--accent)]" aria-hidden="true" />
-                  </div>
-                  <a
-                    href="mailto:library@ncbae.edu.pk"
-                    className="text-white/60 text-xs hover:text-[var(--accent)] transition-colors duration-200"
-                  >
-                    library@ncbae.edu.pk
-                  </a>
+                <div className="flex items-center gap-2.5 text-white/55 text-sm">
+                  <Mail className="w-3.5 h-3.5 text-[var(--accent)]/70 flex-shrink-0" aria-hidden="true" />
+                  <span>library@ncbae.edu.pk</span>
                 </div>
-                <div className="flex items-center gap-2.5 group">
-                  <div className="w-7 h-7 rounded-lg bg-[var(--accent)]/10 flex items-center justify-center flex-shrink-0 group-hover:bg-[var(--accent)]/20 transition-colors duration-200">
-                    <Phone className="w-3.5 h-3.5 text-[var(--accent)]" aria-hidden="true" />
-                  </div>
-                  <a
-                    href="tel:+924235761999"
-                    className="text-white/60 text-xs hover:text-[var(--accent)] transition-colors duration-200"
-                  >
-                    +92-42-35761999
-                  </a>
+                <div className="flex items-center gap-2.5 text-white/55 text-sm">
+                  <Phone className="w-3.5 h-3.5 text-[var(--accent)]/70 flex-shrink-0" aria-hidden="true" />
+                  <span>+92 42 3570 0051</span>
                 </div>
               </div>
             </div>
 
-            {/* ── Navigation links ── */}
+            {/* ── Navigation column ── */}
             <div>
-              <h3 className="text-white font-semibold text-sm mb-5 flex items-center gap-2">
-                <span
-                  className="inline-block w-4 h-0.5 rounded-full"
-                  style={{ background: "linear-gradient(90deg, #c8a96e, #b8944f)" }}
-                />
+              <h3 className="text-white font-semibold text-sm uppercase tracking-wider mb-5 pb-2 border-b border-white/10">
                 Navigation
               </h3>
-              <ul className="flex flex-col gap-1">
+              <ul className="space-y-2.5">
                 {footerLinks.map((link) => (
                   <li key={link.key}>
                     <Link
                       href={getNavHref(link.href)}
                       onClick={(e) => handleLinkClick(e, link.href)}
-                      className="group flex items-center gap-2 text-white/60 text-sm py-1.5 hover:text-[var(--accent)] transition-colors duration-200"
+                      className="flex items-center gap-1.5 text-white/60 hover:text-[var(--accent)] text-sm transition-colors duration-200 group"
                     >
                       <ChevronRight
-                        className="w-3.5 h-3.5 text-[var(--accent)]/0 group-hover:text-[var(--accent)] transition-all duration-200 -translate-x-1 group-hover:translate-x-0"
+                        className="w-3 h-3 opacity-0 group-hover:opacity-100 -translate-x-1 group-hover:translate-x-0 transition-all duration-200"
                         aria-hidden="true"
                       />
-                      <span>{navT[link.key] ?? link.label}</span>
+                      {link.label}
                     </Link>
                   </li>
                 ))}
               </ul>
             </div>
 
-            {/* ── Quick links ── */}
+            {/* ── Quick Links column ── */}
             <div>
-              <h3 className="text-white font-semibold text-sm mb-5 flex items-center gap-2">
-                <span
-                  className="inline-block w-4 h-0.5 rounded-full"
-                  style={{ background: "linear-gradient(90deg, #c8a96e, #b8944f)" }}
-                />
+              <h3 className="text-white font-semibold text-sm uppercase tracking-wider mb-5 pb-2 border-b border-white/10">
                 Quick Access
               </h3>
-              <ul className="flex flex-col gap-1">
+              <ul className="space-y-2.5">
                 {quickLinks.map((link) => (
                   <li key={link.href}>
                     <Link
                       href={link.href}
-                      className="group flex items-center gap-2 text-white/60 text-sm py-1.5 hover:text-[var(--accent)] transition-colors duration-200"
+                      className="flex items-center gap-1.5 text-white/60 hover:text-[var(--accent)] text-sm transition-colors duration-200 group"
                     >
                       <ChevronRight
-                        className="w-3.5 h-3.5 text-[var(--accent)]/0 group-hover:text-[var(--accent)] transition-all duration-200 -translate-x-1 group-hover:translate-x-0"
+                        className="w-3 h-3 opacity-0 group-hover:opacity-100 -translate-x-1 group-hover:translate-x-0 transition-all duration-200"
                         aria-hidden="true"
                       />
-                      <span>{link.label}</span>
+                      {link.label}
                     </Link>
                   </li>
                 ))}
               </ul>
 
-              {/* FYP badge */}
-              <div
-                className="mt-8 inline-flex items-center gap-2 rounded-full px-3 py-1.5 border"
-                style={{
-                  background: "rgba(200,169,110,0.08)",
-                  borderColor: "rgba(200,169,110,0.25)",
-                }}
+              {/* Back to top */}
+              <button
+                onClick={scrollToTop}
+                className="mt-8 flex items-center gap-2 text-[var(--accent)]/70 hover:text-[var(--accent)] text-xs font-medium uppercase tracking-wider transition-colors duration-200 group"
+                aria-label="Scroll back to top"
               >
                 <span
-                  className="w-1.5 h-1.5 rounded-full animate-pulse"
-                  style={{ background: "#c8a96e" }}
-                />
-                <span className="text-[var(--accent)] text-[10px] font-semibold uppercase tracking-wider">
-                  FYP 2026
+                  className="w-6 h-6 rounded-full border border-[var(--accent)]/30 group-hover:border-[var(--accent)]/70 flex items-center justify-center transition-colors duration-200"
+                >
+                  <ArrowUp className="w-3 h-3" aria-hidden="true" />
                 </span>
-              </div>
+                Back to top
+              </button>
             </div>
           </div>
         </div>
 
-        {/* Gradient divider above bottom bar */}
-        <div
-          style={{
-            height: "1px",
-            background:
-              "linear-gradient(90deg, transparent, rgba(200,169,110,0.3), rgba(255,255,255,0.08), rgba(200,169,110,0.3), transparent)",
-          }}
-        />
-
         {/* ── Bottom bar ── */}
-        <div className="container-lms py-5">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-            {/* Copyright */}
-            <p className="text-white/45 text-xs text-center sm:text-left leading-relaxed">
-              &copy; {BRAND.year}{" "}
-              <span className="text-white/60 font-medium">NCBA&amp;E</span>{" "}
-              &mdash; Library Management System. Final Year Project by{" "}
-              <span className="text-[var(--accent)]/80">Rao Muhammad Hamza</span>.
+        <div className="border-t border-white/10">
+          <div className="container-lms py-5 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <p className="text-white/40 text-xs text-center sm:text-left">
+              &copy; {BRAND.year} {BRAND.name}. All rights reserved.
             </p>
-
-            {/* Right side: tech stack + back to top */}
-            <div className="flex items-center gap-4">
-              <span className="hidden sm:flex items-center gap-1.5 text-white/30 text-[10px] uppercase tracking-wider font-medium">
-                Built with
-                <span className="text-[var(--accent)]/60 font-semibold">MERN</span>
-                +
-                <span className="text-[var(--accent)]/60 font-semibold">Tailwind</span>
-              </span>
-
-              {/* Back to top button */}
-              <button
-                onClick={scrollToTop}
-                aria-label="Back to top"
-                className="group flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-200 hover:border-[var(--accent)]/60 hover:bg-[var(--accent)]/10"
-                style={{
-                  borderColor: "rgba(200,169,110,0.2)",
-                  color: "rgba(255,255,255,0.5)",
-                }}
-              >
-                <ArrowUp
-                  className="w-3 h-3 transition-transform duration-200 group-hover:-translate-y-0.5"
-                  style={{ color: "#c8a96e" }}
-                  aria-hidden="true"
-                />
-                <span className="group-hover:text-[var(--accent)] transition-colors duration-200">
-                  Top
-                </span>
-              </button>
-            </div>
+            <p className="text-white/30 text-xs text-center sm:text-right">
+              Developed by Rao Muhammad Hamza &mdash; {BRAND.project}, {BRAND.institution}
+            </p>
           </div>
         </div>
       </div>

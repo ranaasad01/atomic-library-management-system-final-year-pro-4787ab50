@@ -1,201 +1,43 @@
 {
   "nav": {
-    "dashboard": "Panel de Control",
-    "book-search": "Búsqueda de Libros",
-    "issue-return": "Préstamo y Devolución",
+    "dashboard": "Panel",
+    "bookSearch": "Buscar Libros",
+    "issueReturn": "Préstamo y Devolución",
     "fines": "Mis Multas",
-    "admin": "Panel de Administración",
-    "admin-dashboard": "Panel de Admin",
-    "admin-books": "Gestión de Libros",
-    "admin-users": "Gestión de Usuarios",
-    "admin-transactions": "Transacciones",
-    "admin-fines": "Gestión de Multas"
+    "admin": "Panel Admin",
+    "login": "Iniciar Sesión",
+    "signup": "Registrarse",
+    "logout": "Cerrar Sesión",
+    "profile": "Perfil"
   },
   "hero": {
-    "activity1_action": "Prestado",
-    "activity1_book": "El Gran Gatsby",
-    "activity2_action": "Devuelto",
-    "activity2_book": "1984",
-    "activity3_action": "Reservado",
-    "activity3_book": "Sapiens",
-    "badge": "Proyecto Final — NCBA&E",
-    "card_activity_label": "Actividad Reciente",
-    "card_live": "Demo en Vivo",
-    "card_stat1_label": "Libros Catalogados",
-    "card_stat2_label": "Usuarios Activos",
-    "card_stat3_label": "Transacciones",
-    "card_subtitle": "Gestiona, rastrea y optimiza las operaciones de tu biblioteca",
-    "card_title": "Sistema de Gestión de Biblioteca",
-    "cta_primary": "Ver Demo en Vivo",
-    "cta_secondary": "Leer Documentación",
-    "headline1": "Tu Biblioteca,",
-    "headline2": "Organizada Digitalmente",
-    "headline3": "Una solución moderna basada en web para la gestión fluida de bibliotecas.",
-    "subheadline": "Construido con la pila MERN para ofrecer velocidad, confiabilidad y facilidad de uso para bibliotecarios y usuarios.",
-    "trust1": "Aprobado por NCBA&E",
-    "trust2": "Listo para Producción",
-    "trust3": "Código Abierto"
-  },
-  "admin": {
-    "body1": "Gestiona toda tu colección de biblioteca con potentes herramientas administrativas. Rastrea inventario, monitorea circulación y genera reportes detallados en tiempo real.",
-    "body2": "Simplifica operaciones con flujos de trabajo automatizados, gestión de usuarios y capacidades de búsqueda avanzada diseñadas para bibliotecarios.",
-    "card_subtitle": "Control total sobre las operaciones de la biblioteca",
-    "card_title": "Panel de Administración",
-    "cta": "Explorar Características de Admin",
-    "eyebrow": "Para Bibliotecarios",
-    "heading": "Control Completo de Biblioteca"
-  },
-  "cta": {
-    "badge": "¿Listo para comenzar?",
-    "footnote": "No se requiere tarjeta de crédito. Comienza gratis hoy.",
-    "heading": "Transforma Tu Biblioteca Hoy",
-    "primary": "Inicia Tu Prueba Gratuita",
-    "secondary": "Programar una Demostración",
-    "subheading": "Únete a bibliotecas que modernizan sus operaciones con nuestro sistema basado en MERN."
+    "title": "Sistema de Gestión de Biblioteca NCBA&E",
+    "subtitle": "Tu puerta institucional a los recursos de la biblioteca",
+    "cta": "Comenzar",
+    "ctaSecondary": "Saber Más"
   },
   "features": {
-    "eyebrow": "Características Poderosas",
-    "heading": "Todo lo Que Necesitas para Gestionar Tu Biblioteca",
-    "subheading": "Construido con tecnología moderna para operaciones de biblioteca sin interrupciones."
+    "title": "Todo lo que Necesitas",
+    "subtitle": "Una solución completa de gestión de biblioteca"
   },
   "howItWorks": {
-    "eyebrow": "Cómo Funciona",
-    "heading": "Simple, Intuitivo, Poderoso",
-    "subheading": "Pon tu biblioteca en funcionamiento en minutos con nuestro flujo de trabajo simplificado."
+    "title": "Cómo Funciona",
+    "subtitle": "Pasos simples para gestionar tu biblioteca"
+  },
+  "cta": {
+    "title": "¿Listo para Comenzar?",
+    "subtitle": "Únete a la Biblioteca NCBA&E hoy",
+    "button": "Regístrate Ahora"
   },
   "testimonials": {
-    "eyebrow": "Confiado por Bibliotecas",
-    "heading": "Lo Que Dicen los Bibliotecarios"
+    "title": "Lo que Dicen Nuestros Miembros",
+    "subtitle": "De confianza para estudiantes y profesores"
   },
-  "login-form": [
-    "Email address — use the address registered with the library office",
-    "Password — minimum 8 characters; contact your librarian if you have forgotten your credentials",
-    "Remember me — keeps your session active for 7 days on trusted devices",
-    "Sign In — authenticates via JWT and routes you to your role-appropriate dashboard"
-  ],
-  "forgot-password": [
-    "Enter your registered email address to receive a password reset link",
-    "Check your inbox — the reset email arrives within 2 minutes; check your spam folder if it doesn't appear",
-    "Reset links are single-use and expire after 30 minutes for account security"
-  ],
-  "footer": [
-    "Home / Dashboard — /dashboard",
-    "Book Search — /books/search",
-    "Issue & Return — /transactions/issue-return",
-    "Fine Management — /fines",
-    "Admin Panel — /admin/dashboard"
-  ],
-  "header": [
-    "Home — /dashboard",
-    "Search Books — /books/search",
-    "My Transactions — /transactions/issue-return",
-    "My Fines — /fines",
-    "Admin Panel — /admin/dashboard"
-  ],
-  "welcome-banner": [
-    "2 Books Currently Issued",
-    "1 Pending Fine — Rs. 35.00",
-    "Next Due Date — 28 Jan 2025",
-    "Member Since — March 2023",
-    "Membership No. — LIB-2023-0047"
-  ],
-  "issued-books": [
-    "Introduction to Algorithms — Thomas H. Cormen · Due: 28 Jan 2025 · Shelf: CS-A3 · Status: On Time",
-    "Database System Concepts — Abraham Silberschatz · Due: 14 Jan 2025 · Shelf: DB-B1 · Status: Overdue by 3 days",
-    "Clean Code — Robert C. Martin · Due: 05 Feb 2025 · Shelf: SE-C2 · Status: On Time"
-  ],
-  "fines-overview": [
-    "Total Fines Incurred — Rs. 85.00 (all time)",
-    "Paid Fines — Rs. 50.00 · 2 transactions cleared",
-    "Pending Fine — Rs. 35.00 · Database System Concepts · 7 days overdue",
-    "Fine Rate — Rs. 5.00 per overdue day",
-    "Last Payment — 10 Dec 2024 · Rs. 50.00 · Marked Paid by Admin"
-  ],
-  "transaction-history": [
-    "Introduction to Algorithms — Issued 14 Jan 2025 · Due 28 Jan 2025 · Status: Active",
-    "Database System Concepts — Issued 07 Jan 2025 · Due 14 Jan 2025 · Status: Overdue",
-    "Clean Code — Issued 22 Jan 2025 · Due 05 Feb 2025 · Status: Active",
-    "Operating System Concepts — Issued 01 Dec 2024 · Returned 14 Dec 2024 · Status: Returned",
-    "Computer Networks — Issued 10 Nov 2024 · Returned 24 Nov 2024 · Status: Returned"
-  ],
-  "quick-actions": [
-    "Search Books — Browse the full catalog and check real-time availability — /books/search",
-    "View My Fines — See pending and paid fine records with calculation breakdown — /fines",
-    "Issue & Return — Initiate a book return or view active issue requests — /transactions/issue-return",
-    "Transaction History — Review your complete borrowing and return log — /transactions/issue-return",
-    "Admin Panel — Access admin dashboard, book management, and user controls — /admin/dashboard"
-  ],
-  "search-bar": [
-    "Search by title — e.g. \"Introduction to Algorithms\"",
-    "Search by author — e.g. \"Thomas H. Cormen\"",
-    "Search by ISBN — e.g. \"978-0262033848\"",
-    "Press Enter or click Search to view results"
-  ],
-  "filters": [
-    "Category — Computer Science | Engineering | Mathematics | Business | Literature | Social Sciences | Natural Sciences | Law | Medicine | General",
-    "Availability — All Books | Available Now | Currently Issued",
-    "Publication Year — Any Year | 2020–2024 | 2015–2019 | 2010–2014 | Before 2010",
-    "Shelf Location — All Shelves | Section A | Section B | Section C | Section D | Reference Room",
-    "Sort By — Relevance | Title A–Z | Title Z–A | Newest First | Most Copies Available",
-    "Clear All Filters"
-  ],
-  "book-grid": [
-    "Introduction to Algorithms — Thomas H. Cormen · Category: Computer Science · ISBN: 978-0262033848 · Copies Available: 3 of 5 · Shelf: Section A-12 · Status: Available",
-    "Database System Concepts — Abraham Silberschatz · Category: Computer Science · ISBN: 978-0078022159 · Copies Available: 1 of 4 · Shelf: Section A-15 · Status: Available",
-    "Operating System Concepts — Abraham Silberschatz · Category: Computer Science · ISBN: 978-1119800361 · Copies Available: 0 of 3 · Shelf: Section A-18 · Status: Issued — All Copies Out",
-    "Engineering Mathematics — K.A. Stroud · Category: Mathematics · ISBN: 978-1137031204 · Copies Available: 2 of 2 · Shelf: Section B-04 · Status: Available",
-    "Principles of Economics — N. Gregory Mankiw · Category: Business · ISBN: 978-0357038314 · Copies Available: 4 of 6 · Shelf: Section C-07 · Status: Available",
-    "Computer Networks — Andrew S. Tanenbaum · Category: Computer Science · ISBN: 978-0132126953 · Copies Available: 1 of 3 · Shelf: Section A-22 · Status: Available",
-    "Artificial Intelligence: A Modern Approach — Stuart Russell · Category: Computer Science · ISBN: 978-0134610993 · Copies Available: 0 of 2 · Shelf: Section A-30 · Status: Issued — All Copies Out",
-    "Calculus: Early Transcendentals — James Stewart · Category: Mathematics · ISBN: 978-1285741550 · Copies Available: 5 of 5 · Shelf: Section B-11 · Status: Available",
-    "Business Communication Today — Courtland L. Bovée · Category: Business · ISBN: 978-0134642543 · Copies Available: 2 of 4 · Shelf: Section C-02 · Status: Available",
-    "Fundamentals of Physics — David Halliday · Category: Natural Sciences · ISBN: 978-1118230718 · Copies Available: 3 of 3 · Shelf: Section D-06 · Status: Available",
-    "Software Engineering — Ian Sommerville · Category: Computer Science · ISBN: 978-0133943030 · Copies Available: 1 of 2 · Shelf: Section A-09 · Status: Available",
-    "Discrete Mathematics and Its Applications — Kenneth H. Rosen · Category: Mathematics · ISBN: 978-0073383095 · Copies Available: 0 of 3 · Shelf: Section B-19 · Status: Issued — All Copies Out"
-  ],
-  "pagination": [
-    "Previous page",
-    "Page 1 of 4 — currently viewing",
-    "Page 2",
-    "Page 3",
-    "Page 4",
-    "Next page",
-    "Results per page: 12 | 24 | 48"
-  ],
-  "issue-form": [
-    "Member ID or Name — search by membership number (e.g. MBR-2024-0041) or type the member's full name to auto-suggest",
-    "Book Title or ISBN — type at least 3 characters to search the catalog; unavailable books are greyed out",
-    "Issue Date — defaults to today's date; can be adjusted for backdated entries",
-    "Due Date — set the return deadline (default: 14 days from issue date); required field",
-    "Remarks — optional notes about the book's condition at time of issue (e.g. 'Cover slightly worn')",
-    "Issued By — auto-populated from your JWT session; displayed as read-only for audit purposes"
-  ],
-  "return-form": [
-    "Search Active Issues — enter the member's name, membership number, or the book's ISBN to locate the open transaction",
-    "Transaction ID — optionally enter the exact transaction ID (e.g. TXN-20240918-007) for a precise lookup",
-    "Return Date — defaults to today; adjust only for backdated corrections authorised by an admin",
-    "Book Condition on Return — select from Good, Fair, or Damaged; 'Damaged' flags the record for admin review",
-    "Overdue Fine Preview — if the return date exceeds the due date, the estimated fine (PKR 5/day) is shown before confirmation",
-    "Remarks — optional staff notes about the return (e.g. 'Pages 34–36 torn; flagged for replacement')"
-  ],
-  "transaction-list": [
-    "Filter by Status — All | Issued | Returned | Overdue — updates the table instantly without a page reload",
-    "Date Range Filter — select a start and end date to view transactions within a specific period",
-    "Search by Member or Book — type a name, membership number, or book title to filter rows in real time",
-    "TXN-20240918-001 | Introduction to Algorithms | Ali Hassan (MBR-2024-0012) | Issued: 18 Sep 2024 | Due: 02 Oct 2024 | Status: Returned",
-    "TXN-20240920-002 | Database System Concepts | Sara Malik (MBR-2024-0027) | Issued: 20 Sep 2024 | Due: 04 Oct 2024 | Status: Overdue — Fine: PKR 75",
-    "TXN-20240922-003 | Operating System Principles | Usman Tariq (MBR-2024-0033) | Issued: 22 Sep 2024 | Due: 06 Oct 2024 | Status: Issued",
-    "TXN-20240923-004 | Computer Networks — Tanenbaum | Ayesha Raza (MBR-2024-0019) | Issued: 23 Sep 2024 | Due: 07 Oct 2024 | Status: Issued",
-    "TXN-20240910-005 | Discrete Mathematics | Bilal Ahmed (MBR-2024-0008) | Issued: 10 Sep 2024 | Due: 24 Sep 2024 | Status: Returned",
-    "Pagination — 20 rows per page; navigate with Previous / Next or jump to a specific page number"
-  ],
-  "confirmation-modal": [
-    "Transaction Type — clearly labelled as ISSUE or RETURN at the top of the modal in the appropriate status colour",
-    "Member — full name and membership number (e.g. Sara Malik — MBR-2024-0027)",
-    "Book — title, author, and ISBN (e.g. Database System Concepts — Silberschatz, Korth & Sudarshan — ISBN 978-0-07-352332-3)",
-    "Issue Date & Due Date — displayed side by side for quick verification before confirming a checkout",
-    "Estimated Fine (returns only) — shown in destructive red if the return is overdue, with the per-day rate and total amount",
-    "Cancel — closes the modal without making any changes; the form retains its filled values",
-    "Confirm & Submit — writes the transaction, updates available_copies in the books collection, and logs the action to activity_logs"
-  ]
+  "admin": {
+    "dashboard": "Panel de Administración",
+    "books": "Gestión de Libros",
+    "users": "Gestión de Usuarios",
+    "transactions": "Transacciones",
+    "fines": "Gestión de Multas"
+  }
 }

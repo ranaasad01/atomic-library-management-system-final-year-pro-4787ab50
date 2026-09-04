@@ -1,52 +1,31 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
-import { useTranslations } from "next-intl";
-import { navLinks, BRAND } from "@/lib/data";
-import { createBrowserClient } from "@supabase/ssr";
-import { Menu, X, BookOpen, User, LogOut, ChevronDown, Bell, Settings } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
+import { navLinks, BRAND } from '@/lib/data';
+import { createBrowserClient } from '@supabase/ssr';
+import { Menu, X, BookOpen, User, LogOut, ChevronDown, Settings } from 'lucide-react';
 
 const navbarVariants = {
   hidden: { opacity: 0, y: -12 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeOut" } },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: 'easeOut' } },
 };
 
 const mobileMenuVariants = {
   hidden: { opacity: 0, height: 0 },
-  visible: {
-    opacity: 1,
-    height: "auto",
-    transition: { duration: 0.3, ease: "easeOut" },
-  },
-  exit: {
-    opacity: 0,
-    height: 0,
-    transition: { duration: 0.2, ease: "easeIn" },
-  },
+  visible: { opacity: 1, height: 'auto', transition: { duration: 0.3, ease: 'easeOut' } },
+  exit: { opacity: 0, height: 0, transition: { duration: 0.2, ease: 'easeIn' } },
 };
 
 const dropdownVariants = {
   hidden: { opacity: 0, y: -8, scale: 0.97 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    scale: 1,
-    transition: { duration: 0.2, ease: "easeOut" },
-  },
-  exit: {
-    opacity: 0,
-    y: -8,
-    scale: 0.97,
-    transition: { duration: 0.15, ease: "easeIn" },
-  },
+  visible: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.2, ease: 'easeOut' } },
+  exit: { opacity: 0, y: -8, scale: 0.97, transition: { duration: 0.15, ease: 'easeIn' } },
 };
 
 export default function Navbar() {
-  const t = useTranslations();
-  const navT = (t.raw("nav") as Record<string, string>) ?? {};
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -63,29 +42,27 @@ export default function Navbar() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
-  const isHome = pathname === "/";
+  const isHome = pathname === '/';
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 8);
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   useEffect(() => {
     const getSession = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+      const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
         const { data: profile } = await supabase
-          .from("users")
-          .select("full_name, role")
-          .eq("id", session.user.id)
+          .from('users')
+          .select('full_name, role')
+          .eq('id', session.user.id)
           .single();
         setUserSession({
-          name: profile?.full_name ?? session.user.email ?? "User",
-          email: session.user.email ?? "",
-          role: profile?.role ?? "member",
+          name: profile?.full_name ?? session.user.email ?? 'User',
+          email: session.user.email ?? '',
+          role: profile?.role ?? 'member',
         });
       } else {
         setUserSession(null);
@@ -93,20 +70,18 @@ export default function Navbar() {
     };
     getSession();
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         supabase
-          .from("users")
-          .select("full_name, role")
-          .eq("id", session.user.id)
+          .from('users')
+          .select('full_name, role')
+          .eq('id', session.user.id)
           .single()
           .then(({ data: profile }) => {
             setUserSession({
-              name: profile?.full_name ?? session.user.email ?? "User",
-              email: session.user.email ?? "",
-              role: profile?.role ?? "member",
+              name: profile?.full_name ?? session.user?.email ?? 'User',
+              email: session.user?.email ?? '',
+              role: profile?.role ?? 'member',
             });
           });
       } else {
@@ -115,299 +90,151 @@ export default function Navbar() {
     });
 
     return () => subscription.unsubscribe();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setUserSession(null);
     setUserMenuOpen(false);
-    router.push("/login");
-  };
-
-  const handleNavClick = (
-    e: React.MouseEvent<HTMLAnchorElement>,
-    href: string
-  ) => {
-    if (href.startsWith("#")) {
-      if (pathname === "/") {
-        e.preventDefault();
-        document.querySelector(href)?.scrollIntoView({ behavior: "smooth" });
-      }
-    }
-    setMobileOpen(false);
-  };
-
-  const getNavHref = (href: string) => {
-    if (href.startsWith("#")) {
-      return pathname === "/" ? href : "/" + href;
-    }
-    return href;
-  };
-
-  const isActive = (href: string) => {
-    if (href === "/") return pathname === "/";
-    return pathname.startsWith(href);
+    router.push('/login');
   };
 
   const visibleLinks = navLinks.filter(
-    (link) => !link.adminOnly || userSession?.role === "admin"
+    (link) => !link.adminOnly || userSession?.role === 'admin'
   );
 
-  // Navbar background logic:
-  // - On home page + not scrolled: transparent (overlays hero)
-  // - On home page + scrolled: polished glass navy
-  // - On other pages: always navy
-  const isTransparent = isHome && !scrolled;
+  const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/');
 
-  const navStyle: React.CSSProperties = isTransparent
-    ? {
-        background: "transparent",
-        boxShadow: "none",
-      }
-    : {
-        background: "rgba(30,58,95,0.97)",
-        backdropFilter: "blur(20px)",
-        WebkitBackdropFilter: "blur(20px)",
-        boxShadow: "0 4px 24px rgba(30,58,95,0.25)",
-      };
+  const navBg = scrolled || !isHome
+    ? 'bg-[var(--primary)] shadow-md'
+    : 'bg-transparent';
 
   return (
     <motion.nav
       variants={navbarVariants}
       initial="hidden"
       animate="visible"
-      style={navStyle}
-      className="fixed top-0 left-0 right-0 z-50 transition-all duration-300"
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${navBg}`}
     >
-      {/* Hairline border at bottom when scrolled */}
-      {!isTransparent && (
-        <div className="absolute bottom-0 left-0 right-0 h-px bg-white/10" />
-      )}
-
       <div className="container-lms">
         <div className="flex items-center justify-between h-16">
-          {/* ── Logo / Brand ── */}
-          <Link
-            href="/"
-            className="flex items-center gap-3 group flex-shrink-0"
-          >
-            {/* Gold gradient icon container */}
+          {/* Logo */}
+          <Link href="/" className="flex items-center gap-2.5 group">
             <div
-              className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 transition-transform duration-200 group-hover:scale-105"
-              style={{
-                background: "linear-gradient(135deg, #c8a96e 0%, #e8c98e 50%, #b8944f 100%)",
-                boxShadow: "0 2px 8px rgba(200,169,110,0.4)",
-              }}
+              className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+              style={{ background: 'linear-gradient(135deg, #c8a96e, #b8944f)' }}
             >
-              <BookOpen className="w-5 h-5 text-white" aria-hidden="true" />
+              <BookOpen className="h-4 w-4 text-white" />
             </div>
             <div className="hidden sm:block">
-              <span className="text-white font-semibold text-sm leading-tight block tracking-tight">
-                {BRAND.shortName}
-              </span>
-              <span className="text-white/40 text-[10px] uppercase tracking-widest block leading-tight">
-                {BRAND.project}
-              </span>
+              <div className="text-white font-bold text-sm leading-tight">{BRAND.shortName}</div>
+              <div className="text-[#c8a96e] text-xs leading-tight opacity-80">Library Portal</div>
             </div>
           </Link>
 
-          {/* ── Desktop Nav Links ── */}
+          {/* Desktop Nav */}
           <div className="hidden md:flex items-center gap-1">
-            {visibleLinks.map((link) => {
-              const active = isActive(link.href);
-              return (
-                <Link
-                  key={link.key}
-                  href={getNavHref(link.href)}
-                  onClick={(e) => handleNavClick(e, link.href)}
-                  className="relative px-3.5 py-2 text-sm font-medium rounded-lg transition-all duration-200 group"
-                  style={{
-                    color: active ? "#c8a96e" : "rgba(255,255,255,0.75)",
-                  }}
-                  onMouseEnter={(e) => {
-                    if (!active) {
-                      (e.currentTarget as HTMLAnchorElement).style.color = "#ffffff";
-                      (e.currentTarget as HTMLAnchorElement).style.background = "rgba(255,255,255,0.08)";
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!active) {
-                      (e.currentTarget as HTMLAnchorElement).style.color = "rgba(255,255,255,0.75)";
-                      (e.currentTarget as HTMLAnchorElement).style.background = "transparent";
-                    }
-                  }}
-                >
-                  {navT[link.key] ?? link.label}
-                  {/* Gold underline + dot for active */}
-                  {active && (
-                    <>
-                      <span
-                        className="absolute bottom-0.5 left-3.5 right-3.5 h-0.5 rounded-full"
-                        style={{ background: "linear-gradient(90deg, #c8a96e, #e8c98e)" }}
-                      />
-                      <span
-                        className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#c8a96e]"
-                      />
-                    </>
-                  )}
-                </Link>
-              );
-            })}
+            {visibleLinks.map((link) => (
+              <Link
+                key={link.key}
+                href={link.href}
+                className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all duration-200 ${
+                  isActive(link.href)
+                    ? 'bg-white/15 text-white'
+                    : 'text-white/75 hover:text-white hover:bg-white/10'
+                }`}
+              >
+                {link.label}
+              </Link>
+            ))}
           </div>
 
-          {/* ── Right Side Actions ── */}
+          {/* Right side */}
           <div className="flex items-center gap-2">
             {userSession ? (
-              <>
-                {/* Bell icon */}
+              <div className="relative">
                 <button
-                  className="hidden md:flex w-9 h-9 items-center justify-center rounded-lg text-white/60 hover:text-white hover:bg-white/10 transition-all duration-200"
-                  aria-label="Notifications"
+                  onClick={() => setUserMenuOpen((v) => !v)}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition-colors text-white text-sm"
                 >
-                  <Bell className="w-4 h-4" />
+                  <div className="w-6 h-6 rounded-full bg-[#c8a96e] flex items-center justify-center">
+                    <User className="h-3.5 w-3.5 text-white" />
+                  </div>
+                  <span className="hidden sm:block max-w-[120px] truncate">{userSession.name}</span>
+                  <ChevronDown className={`h-3.5 w-3.5 transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} />
                 </button>
 
-                {/* User dropdown trigger */}
-                <div className="relative">
-                  <button
-                    onClick={() => setUserMenuOpen((v) => !v)}
-                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all duration-200 hover:bg-white/10"
-                    aria-expanded={userMenuOpen}
-                    aria-haspopup="true"
-                  >
-                    {/* Avatar */}
-                    <div
-                      className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white flex-shrink-0"
-                      style={{
-                        background: "linear-gradient(135deg, #c8a96e 0%, #b8944f 100%)",
-                        boxShadow: "0 0 0 2px rgba(200,169,110,0.3)",
-                      }}
+                <AnimatePresence>
+                  {userMenuOpen && (
+                    <motion.div
+                      variants={dropdownVariants}
+                      initial="hidden"
+                      animate="visible"
+                      exit="exit"
+                      className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-xl border border-[var(--border)] overflow-hidden z-50"
                     >
-                      {userSession.name.charAt(0).toUpperCase()}
-                    </div>
-                    <div className="hidden md:block text-left">
-                      <span className="text-white text-xs font-medium block leading-tight max-w-[100px] truncate">
-                        {userSession.name}
-                      </span>
-                      <span
-                        className="text-xs block leading-tight capitalize"
-                        style={{ color: "#c8a96e" }}
-                      >
-                        {userSession.role}
-                      </span>
-                    </div>
-                    <ChevronDown
-                      className={`w-3.5 h-3.5 text-white/50 transition-transform duration-200 ${
-                        userMenuOpen ? "rotate-180" : ""
-                      }`}
-                    />
-                  </button>
-
-                  {/* Dropdown */}
-                  <AnimatePresence>
-                    {userMenuOpen && (
-                      <motion.div
-                        variants={dropdownVariants}
-                        initial="hidden"
-                        animate="visible"
-                        exit="exit"
-                        className="absolute right-0 top-full mt-2 w-56 rounded-xl overflow-hidden"
-                        style={{
-                          background: "#ffffff",
-                          border: "1px solid rgba(214,207,194,0.8)",
-                          boxShadow:
-                            "0 4px 6px -1px rgba(0,0,0,0.07), 0 16px 40px -8px rgba(30,58,95,0.18)",
-                        }}
-                      >
-                        {/* User info header */}
-                        <div className="px-4 py-3 border-b border-[#d6cfc2]/60">
-                          <p className="text-[#1a2a3a] text-sm font-semibold truncate">
-                            {userSession.name}
-                          </p>
-                          <p className="text-[#5a6a7a] text-xs truncate mt-0.5">
-                            {userSession.email}
-                          </p>
-                          <span
-                            className="inline-flex items-center mt-1.5 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide"
-                            style={{
-                              background: "rgba(200,169,110,0.12)",
-                              color: "#b8944f",
-                              border: "1px solid rgba(200,169,110,0.25)",
-                            }}
-                          >
-                            {userSession.role}
-                          </span>
-                        </div>
-
-                        {/* Menu items */}
-                        <div className="py-1.5">
+                      <div className="px-4 py-3 border-b border-[var(--border)] bg-[var(--muted)]">
+                        <p className="text-sm font-semibold text-[var(--foreground)] truncate">{userSession.name}</p>
+                        <p className="text-xs text-[var(--muted-foreground)] truncate">{userSession.email}</p>
+                        <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-xs font-medium bg-[var(--primary)] text-white capitalize">
+                          {userSession.role}
+                        </span>
+                      </div>
+                      <div className="py-1">
+                        {userSession.role === 'admin' && (
                           <Link
-                            href="/dashboard"
+                            href="/admin/dashboard"
                             onClick={() => setUserMenuOpen(false)}
-                            className="flex items-center gap-3 px-4 py-2.5 text-sm text-[#1a2a3a] hover:bg-[#f5f0e8] transition-colors duration-150 group"
+                            className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-[var(--foreground)] hover:bg-[var(--muted)] transition-colors"
                           >
-                            <User className="w-4 h-4 text-[#5a6a7a] group-hover:text-[#c8a96e] transition-colors" />
-                            My Dashboard
+                            <Settings className="h-4 w-4 text-[var(--muted-foreground)]" />
+                            Admin Panel
                           </Link>
-                          {userSession.role === "admin" && (
-                            <Link
-                              href="/admin/dashboard"
-                              onClick={() => setUserMenuOpen(false)}
-                              className="flex items-center gap-3 px-4 py-2.5 text-sm text-[#1a2a3a] hover:bg-[#f5f0e8] transition-colors duration-150 group"
-                            >
-                              <Settings className="w-4 h-4 text-[#5a6a7a] group-hover:text-[#c8a96e] transition-colors" />
-                              Admin Panel
-                            </Link>
-                          )}
-                        </div>
-
-                        {/* Logout */}
-                        <div className="border-t border-[#d6cfc2]/60 py-1.5">
-                          <button
-                            onClick={handleLogout}
-                            className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-[#e74c3c] hover:bg-red-50 transition-colors duration-150 group"
-                          >
-                            <LogOut className="w-4 h-4" />
-                            Sign Out
-                          </button>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              </>
+                        )}
+                        <button
+                          onClick={handleLogout}
+                          className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-[var(--destructive)] hover:bg-red-50 transition-colors"
+                        >
+                          <LogOut className="h-4 w-4" />
+                          Sign Out
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             ) : (
-              /* Sign In button — gold gradient */
-              <Link
-                href="/login"
-                className="hidden md:inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-white transition-all duration-200 hover:scale-[1.03] active:scale-[0.98]"
-                style={{
-                  background: "linear-gradient(135deg, #c8a96e 0%, #e8c98e 50%, #b8944f 100%)",
-                  boxShadow: "0 2px 8px rgba(200,169,110,0.35), 0 1px 2px rgba(0,0,0,0.1)",
-                }}
-              >
-                Sign In
-              </Link>
+              <div className="flex items-center gap-2">
+                <Link
+                  href="/login"
+                  className="px-3 py-1.5 text-sm font-medium text-white/80 hover:text-white transition-colors"
+                >
+                  Login
+                </Link>
+                <Link
+                  href="/signup"
+                  className="px-4 py-1.5 text-sm font-semibold rounded-lg transition-all duration-200 text-[var(--primary)]"
+                  style={{ background: 'linear-gradient(135deg, #c8a96e, #b8944f)' }}
+                >
+                  Sign Up
+                </Link>
+              </div>
             )}
 
-            {/* Mobile hamburger */}
+            {/* Mobile menu toggle */}
             <button
               onClick={() => setMobileOpen((v) => !v)}
-              className="md:hidden w-9 h-9 flex items-center justify-center rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-all duration-200"
-              aria-label={mobileOpen ? "Close menu" : "Open menu"}
-              aria-expanded={mobileOpen}
+              className="md:hidden p-2 rounded-lg text-white/80 hover:text-white hover:bg-white/10 transition-colors"
+              aria-label="Toggle menu"
             >
-              {mobileOpen ? (
-                <X className="w-5 h-5" />
-              ) : (
-                <Menu className="w-5 h-5" />
-              )}
+              {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
           </div>
         </div>
       </div>
 
-      {/* ── Mobile Menu ── */}
+      {/* Mobile menu */}
       <AnimatePresence>
         {mobileOpen && (
           <motion.div
@@ -415,88 +242,51 @@ export default function Navbar() {
             initial="hidden"
             animate="visible"
             exit="exit"
-            className="md:hidden overflow-hidden"
-            style={{
-              background: "rgba(20,40,75,0.98)",
-              backdropFilter: "blur(20px)",
-              WebkitBackdropFilter: "blur(20px)",
-              borderTop: "1px solid rgba(255,255,255,0.08)",
-            }}
+            className="md:hidden bg-[var(--primary)] border-t border-white/10 overflow-hidden"
           >
             <div className="container-lms py-3 flex flex-col gap-1">
-              {visibleLinks.map((link) => {
-                const active = isActive(link.href);
-                return (
-                  <Link
-                    key={link.key}
-                    href={getNavHref(link.href)}
-                    onClick={(e) => handleNavClick(e, link.href)}
-                    className="flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200"
-                    style={{
-                      color: active ? "#c8a96e" : "rgba(255,255,255,0.8)",
-                      background: active ? "rgba(200,169,110,0.1)" : "transparent",
-                      border: active ? "1px solid rgba(200,169,110,0.2)" : "1px solid transparent",
-                    }}
-                  >
-                    {navT[link.key] ?? link.label}
-                    {active && (
-                      <span
-                        className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                        style={{ background: "#c8a96e" }}
-                      />
-                    )}
-                  </Link>
-                );
-              })}
-
-              {/* Mobile auth section */}
-              <div
-                className="mt-2 pt-3"
-                style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}
-              >
-                {userSession ? (
-                  <div className="flex flex-col gap-1">
-                    {/* User info */}
-                    <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/5">
-                      <div
-                        className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold text-white flex-shrink-0"
-                        style={{
-                          background: "linear-gradient(135deg, #c8a96e 0%, #b8944f 100%)",
-                        }}
-                      >
-                        {userSession.name.charAt(0).toUpperCase()}
-                      </div>
-                      <div>
-                        <p className="text-white text-sm font-medium leading-tight">
-                          {userSession.name}
-                        </p>
-                        <p className="text-white/50 text-xs leading-tight capitalize">
-                          {userSession.role}
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={handleLogout}
-                      className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-red-400 hover:bg-red-500/10 transition-all duration-200"
-                    >
-                      <LogOut className="w-4 h-4" />
-                      Sign Out
-                    </button>
-                  </div>
-                ) : (
+              {visibleLinks.map((link) => (
+                <Link
+                  key={link.key}
+                  href={link.href}
+                  onClick={() => setMobileOpen(false)}
+                  className={`px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                    isActive(link.href)
+                      ? 'bg-white/15 text-white'
+                      : 'text-white/75 hover:text-white hover:bg-white/10'
+                  }`}
+                >
+                  {link.label}
+                </Link>
+              ))}
+              {!userSession && (
+                <div className="flex gap-2 pt-2 border-t border-white/10 mt-1">
                   <Link
                     href="/login"
                     onClick={() => setMobileOpen(false)}
-                    className="flex items-center justify-center gap-2 w-full px-4 py-3 rounded-xl text-sm font-semibold text-white transition-all duration-200"
-                    style={{
-                      background: "linear-gradient(135deg, #c8a96e 0%, #e8c98e 50%, #b8944f 100%)",
-                      boxShadow: "0 2px 8px rgba(200,169,110,0.3)",
-                    }}
+                    className="flex-1 text-center px-4 py-2 text-sm font-medium text-white/80 hover:text-white border border-white/20 rounded-lg transition-colors"
                   >
-                    Sign In
+                    Login
                   </Link>
-                )}
-              </div>
+                  <Link
+                    href="/signup"
+                    onClick={() => setMobileOpen(false)}
+                    className="flex-1 text-center px-4 py-2 text-sm font-semibold rounded-lg text-[var(--primary)] transition-colors"
+                    style={{ background: 'linear-gradient(135deg, #c8a96e, #b8944f)' }}
+                  >
+                    Sign Up
+                  </Link>
+                </div>
+              )}
+              {userSession && (
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-red-300 hover:text-red-200 hover:bg-white/5 rounded-lg transition-colors mt-1"
+                >
+                  <LogOut className="h-4 w-4" />
+                  Sign Out
+                </button>
+              )}
             </div>
           </motion.div>
         )}
