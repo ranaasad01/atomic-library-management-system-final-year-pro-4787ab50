@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Users, Search, Plus, Edit2, Trash2, CheckCircle, XCircle, Shield, User, Phone, Mail, MapPin, Hash, AlertCircle, X, Save, RefreshCw, UserCheck, UserX, Crown } from 'lucide-react';
+import { Users, Search, Plus, Edit2, Trash2, CheckCircle, XCircle, Shield, User, Phone, Mail, MapPin, Hash, AlertCircle, X, Save, RefreshCw, Crown, ChevronDown, UserCheck, UserX, ToggleLeft, ToggleRight, ChevronRight, BookOpen } from 'lucide-react';
 import { Reveal } from "@/components/Reveal";
-import { fadeInUp, staggerContainer, scaleIn } from "@/lib/motion";
+import { fadeInUp, staggerContainer, scaleIn, modalVariants, overlayVariants } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 
@@ -99,344 +99,431 @@ function StatCard({
 }) {
   return (
     <motion.div
-      whileHover={{ y: -4, boxShadow: "0 12px 40px -8px rgba(30,58,95,0.18)" }}
+      whileHover={{ y: -3, boxShadow: "0 12px 40px -8px rgba(30,58,95,0.18)" }}
       transition={{ duration: 0.22, ease: "easeOut" }}
       className="bg-white rounded-2xl border border-[#d6cfc2] p-5 flex items-center gap-4 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_4px_16px_-4px_rgba(0,0,0,0.08)] cursor-default"
     >
-      <div className={cn("w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0", iconBg)}>
+      <div
+        className={cn(
+          "w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0",
+          iconBg
+        )}
+      >
         <Icon className={cn("w-5 h-5", iconColor)} />
       </div>
       <div>
-        <p className="text-2xl font-bold text-[#1e3a5f] leading-none tracking-tight">{value}</p>
+        <p className="text-2xl font-bold text-[#1e3a5f] leading-none tracking-tight">
+          {value}
+        </p>
         <p className="text-xs text-slate-500 mt-1 font-medium">{label}</p>
       </div>
     </motion.div>
   );
 }
 
-// ─── User Modal ───────────────────────────────────────────────────────────────
+// ─── Loading Skeleton ─────────────────────────────────────────────────────────
+
+function TableSkeleton() {
+  return (
+    <>
+      {Array.from({ length: 6 }).map((_, i) => (
+        <tr key={i} className="border-b border-[#ede8df]">
+          <td className="px-5 py-4">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full bg-slate-200 animate-pulse" />
+              <div className="space-y-1.5">
+                <div className="h-3.5 w-32 bg-slate-200 rounded animate-pulse" />
+                <div className="h-3 w-20 bg-slate-100 rounded animate-pulse" />
+              </div>
+            </div>
+          </td>
+          <td className="px-5 py-4">
+            <div className="h-3.5 w-40 bg-slate-200 rounded animate-pulse" />
+          </td>
+          <td className="px-5 py-4">
+            <div className="h-6 w-16 bg-slate-200 rounded-full animate-pulse" />
+          </td>
+          <td className="px-5 py-4">
+            <div className="h-3.5 w-24 bg-slate-200 rounded animate-pulse" />
+          </td>
+          <td className="px-5 py-4">
+            <div className="h-3.5 w-24 bg-slate-200 rounded animate-pulse" />
+          </td>
+          <td className="px-5 py-4">
+            <div className="h-6 w-16 bg-slate-200 rounded-full animate-pulse" />
+          </td>
+          <td className="px-5 py-4">
+            <div className="h-3.5 w-20 bg-slate-200 rounded animate-pulse" />
+          </td>
+          <td className="px-5 py-4">
+            <div className="flex gap-2">
+              <div className="h-8 w-8 bg-slate-200 rounded-lg animate-pulse" />
+              <div className="h-8 w-8 bg-slate-200 rounded-lg animate-pulse" />
+              <div className="h-8 w-8 bg-slate-200 rounded-lg animate-pulse" />
+            </div>
+          </td>
+        </tr>
+      ))}
+    </>
+  );
+}
+
+// ─── Form Field ──────────────────────────────────────────────────────────────
+
+function FormField({
+  label,
+  icon: Icon,
+  required,
+  children,
+}: {
+  label: string;
+  icon?: React.ElementType;
+  required?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-[#1e3a5f]">
+        {Icon && <Icon className="h-3.5 w-3.5 text-[#c8a96e]" />}
+        {label}
+        {required && <span className="text-red-500">*</span>}
+      </label>
+      {children}
+    </div>
+  );
+}
+
+const inputCls =
+  "w-full rounded-xl border border-[#d6cfc2] bg-[#f5f0e8]/60 px-3.5 py-2.5 text-sm text-[#1a2a3a] placeholder:text-slate-400 transition-all duration-200 focus:border-[#1e3a5f] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/10 disabled:opacity-60 disabled:cursor-not-allowed";
+
+// ─── User Form Modal ──────────────────────────────────────────────────────────
 
 function UserModal({
   open,
   onClose,
   onSave,
   initial,
-  loading,
+  mode,
+  saving,
   error,
 }: {
   open: boolean;
   onClose: () => void;
-  onSave: (form: FormState) => void;
+  onSave: (form: FormState) => Promise<void>;
   initial: FormState | null;
-  loading: boolean;
+  mode: "add" | "edit";
+  saving: boolean;
   error: string | null;
 }) {
   const [form, setForm] = useState<FormState>(initial ?? EMPTY_FORM);
+  const [localError, setLocalError] = useState<string | null>(null);
 
   useEffect(() => {
     setForm(initial ?? EMPTY_FORM);
+    setLocalError(null);
   }, [initial, open]);
 
   function set<K extends keyof FormState>(key: K, val: FormState[K]) {
     setForm((prev) => ({ ...prev, [key]: val }));
   }
 
-  if (!open) return null;
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setLocalError(null);
+    if (!form.full_name.trim()) {
+      setLocalError("Full name is required.");
+      return;
+    }
+    if (!form.email.trim()) {
+      setLocalError("Email is required.");
+      return;
+    }
+    await onSave(form);
+  }
 
-  const isEdit = !!initial?.email;
+  const displayError = localError ?? error;
 
   return (
     <AnimatePresence>
-      <motion.div
-        className="fixed inset-0 z-50 flex items-center justify-center p-4"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-      >
-        {/* Backdrop */}
+      {open && (
         <motion.div
-          className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-          onClick={onClose}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-        />
-
-        {/* Modal */}
-        <motion.div
-          className="relative z-10 w-full max-w-lg bg-white rounded-2xl shadow-[0_24px_80px_-12px_rgba(0,0,0,0.3)] overflow-hidden"
-          variants={scaleIn}
-          initial="hidden"
-          animate="visible"
-          exit="hidden"
         >
-          {/* Gradient Header */}
-          <div className="bg-gradient-to-br from-[#1e3a5f] to-[#2d5a8e] px-6 py-5 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center">
-                <User className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <h2 className="text-white font-semibold text-base leading-tight">
-                  {isEdit ? "Edit User" : "Add New User"}
-                </h2>
-                <p className="text-white/60 text-xs mt-0.5">
-                  {isEdit ? "Update member information" : "Register a new library member"}
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={onClose}
-              className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
-              aria-label="Close modal"
+          {/* Backdrop */}
+          <motion.div
+            className="absolute inset-0 bg-[#1a2a3a]/60 backdrop-blur-sm"
+            variants={overlayVariants}
+            initial="hidden"
+            animate="visible"
+            exit="hidden"
+            onClick={onClose}
+          />
+
+          {/* Modal */}
+          <motion.div
+            className="relative z-10 w-full max-w-lg bg-white rounded-2xl shadow-[0_8px_40px_-8px_rgba(30,58,95,0.28)] border border-[#d6cfc2] overflow-hidden"
+            variants={modalVariants}
+            initial="hidden"
+            animate="visible"
+            exit="hidden"
+          >
+            {/* Header */}
+            <div
+              className="px-6 py-5 flex items-center justify-between"
+              style={{
+                background:
+                  "linear-gradient(135deg, #1e3a5f 0%, #2a4f7c 100%)",
+              }}
             >
-              <X className="w-4 h-4 text-white" />
-            </button>
-          </div>
-
-          {/* Form Body */}
-          <div className="p-6 max-h-[70vh] overflow-y-auto">
-            {error && (
-              <div className="mb-4 flex items-center gap-2 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
-                <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                {error}
-              </div>
-            )}
-
-            <div className="space-y-4">
-              {/* Full Name */}
-              <div>
-                <label className="block text-xs font-semibold text-[#1e3a5f] mb-1.5 uppercase tracking-wide">
-                  Full Name <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <input
-                    type="text"
-                    value={form.full_name}
-                    onChange={(e) => set("full_name", e.target.value)}
-                    placeholder="e.g. Rao Muhammad Hamza"
-                    className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-[#d6cfc2] bg-[#f5f0e8]/50 text-[#1a2a3a] text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/30 focus:border-[#1e3a5f] transition-all"
-                  />
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center">
+                  {mode === "add" ? (
+                    <Plus className="w-5 h-5 text-white" />
+                  ) : (
+                    <Edit2 className="w-5 h-5 text-white" />
+                  )}
                 </div>
-              </div>
-
-              {/* Email */}
-              <div>
-                <label className="block text-xs font-semibold text-[#1e3a5f] mb-1.5 uppercase tracking-wide">
-                  Email Address <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <input
-                    type="email"
-                    value={form.email}
-                    onChange={(e) => set("email", e.target.value)}
-                    placeholder="user@ncbae.edu.pk"
-                    disabled={isEdit}
-                    className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-[#d6cfc2] bg-[#f5f0e8]/50 text-[#1a2a3a] text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/30 focus:border-[#1e3a5f] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                  />
-                </div>
-              </div>
-
-              {/* Role */}
-              <div>
-                <label className="block text-xs font-semibold text-[#1e3a5f] mb-1.5 uppercase tracking-wide">
-                  Role
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  {(["member", "admin"] as UserRole[]).map((r) => (
-                    <button
-                      key={r}
-                      type="button"
-                      onClick={() => set("role", r)}
-                      className={cn(
-                        "flex items-center gap-2 px-3 py-2.5 rounded-xl border text-sm font-medium transition-all",
-                        form.role === r
-                          ? "bg-[#1e3a5f] border-[#1e3a5f] text-white"
-                          : "bg-white border-[#d6cfc2] text-slate-600 hover:border-[#1e3a5f]/40"
-                      )}
-                    >
-                      {r === "admin" ? (
-                        <Crown className="w-3.5 h-3.5" />
-                      ) : (
-                        <User className="w-3.5 h-3.5" />
-                      )}
-                      {r.charAt(0).toUpperCase() + r.slice(1)}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Phone */}
-              <div>
-                <label className="block text-xs font-semibold text-[#1e3a5f] mb-1.5 uppercase tracking-wide">
-                  Phone
-                </label>
-                <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <input
-                    type="tel"
-                    value={form.phone}
-                    onChange={(e) => set("phone", e.target.value)}
-                    placeholder="+92-300-0000000"
-                    className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-[#d6cfc2] bg-[#f5f0e8]/50 text-[#1a2a3a] text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/30 focus:border-[#1e3a5f] transition-all"
-                  />
-                </div>
-              </div>
-
-              {/* Membership Number */}
-              <div>
-                <label className="block text-xs font-semibold text-[#1e3a5f] mb-1.5 uppercase tracking-wide">
-                  Membership Number
-                </label>
-                <div className="relative">
-                  <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <input
-                    type="text"
-                    value={form.membership_number}
-                    onChange={(e) => set("membership_number", e.target.value)}
-                    placeholder="LIB-2024-0001"
-                    className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-[#d6cfc2] bg-[#f5f0e8]/50 text-[#1a2a3a] text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/30 focus:border-[#1e3a5f] transition-all"
-                  />
-                </div>
-              </div>
-
-              {/* Address */}
-              <div>
-                <label className="block text-xs font-semibold text-[#1e3a5f] mb-1.5 uppercase tracking-wide">
-                  Address
-                </label>
-                <div className="relative">
-                  <MapPin className="absolute left-3 top-3 w-4 h-4 text-slate-400" />
-                  <textarea
-                    value={form.address}
-                    onChange={(e) => set("address", e.target.value)}
-                    placeholder="Street, City, Province"
-                    rows={2}
-                    className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-[#d6cfc2] bg-[#f5f0e8]/50 text-[#1a2a3a] text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/30 focus:border-[#1e3a5f] transition-all resize-none"
-                  />
-                </div>
-              </div>
-
-              {/* Active Toggle */}
-              <div className="flex items-center justify-between p-4 rounded-xl bg-[#f5f0e8] border border-[#d6cfc2]">
                 <div>
-                  <p className="text-sm font-semibold text-[#1e3a5f]">Account Status</p>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    {form.is_active ? "Member can access the library system" : "Member access is suspended"}
+                  <h2 className="text-base font-bold text-white leading-tight">
+                    {mode === "add" ? "Add New Member" : "Edit Member"}
+                  </h2>
+                  <p className="text-white/60 text-xs mt-0.5">
+                    User Collection — LMS Database Module
                   </p>
                 </div>
+              </div>
+              <button
+                onClick={onClose}
+                className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
+              >
+                <X className="w-4 h-4 text-white" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+              {displayError && (
+                <div className="flex items-center gap-2.5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  {displayError}
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="sm:col-span-2">
+                  <FormField label="Full Name" icon={User} required>
+                    <input
+                      className={inputCls}
+                      placeholder="e.g. Rao Muhammad Hamza"
+                      value={form.full_name}
+                      onChange={(e) => set("full_name", e.target.value)}
+                    />
+                  </FormField>
+                </div>
+
+                <div className="sm:col-span-2">
+                  <FormField label="Email Address" icon={Mail} required>
+                    <input
+                      type="email"
+                      className={inputCls}
+                      placeholder="member@ncbae.edu.pk"
+                      value={form.email}
+                      onChange={(e) => set("email", e.target.value)}
+                      disabled={mode === "edit"}
+                    />
+                    {mode === "edit" && (
+                      <p className="text-xs text-slate-400 mt-1">
+                        Email cannot be changed after registration.
+                      </p>
+                    )}
+                  </FormField>
+                </div>
+
+                <FormField label="Role" icon={Shield}>
+                  <div className="relative">
+                    <select
+                      className={cn(inputCls, "appearance-none pr-9")}
+                      value={form.role}
+                      onChange={(e) => set("role", e.target.value as UserRole)}
+                    >
+                      <option value="member">Member</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                  </div>
+                </FormField>
+
+                <FormField label="Phone" icon={Phone}>
+                  <input
+                    className={inputCls}
+                    placeholder="+92 300 0000000"
+                    value={form.phone}
+                    onChange={(e) => set("phone", e.target.value)}
+                  />
+                </FormField>
+
+                <div className="sm:col-span-2">
+                  <FormField label="Address" icon={MapPin}>
+                    <input
+                      className={inputCls}
+                      placeholder="Street, City, Pakistan"
+                      value={form.address}
+                      onChange={(e) => set("address", e.target.value)}
+                    />
+                  </FormField>
+                </div>
+
+                <FormField label="Membership Number" icon={Hash}>
+                  <input
+                    className={inputCls}
+                    placeholder="LIB-0001"
+                    value={form.membership_number}
+                    onChange={(e) => set("membership_number", e.target.value)}
+                  />
+                  <p className="text-xs text-slate-400 mt-1">Format: LIB-XXXX</p>
+                </FormField>
+
+                <FormField label="Account Status" icon={CheckCircle}>
+                  <button
+                    type="button"
+                    onClick={() => set("is_active", !form.is_active)}
+                    className={cn(
+                      "flex items-center gap-2.5 rounded-xl border px-3.5 py-2.5 text-sm font-medium transition-all duration-200",
+                      form.is_active
+                        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                        : "border-red-200 bg-red-50 text-red-700"
+                    )}
+                  >
+                    {form.is_active ? (
+                      <ToggleRight className="w-5 h-5" />
+                    ) : (
+                      <ToggleLeft className="w-5 h-5" />
+                    )}
+                    {form.is_active ? "Active" : "Inactive"}
+                  </button>
+                </FormField>
+              </div>
+
+              {/* Footer */}
+              <div className="flex items-center justify-end gap-3 pt-2 border-t border-[#ede8df]">
                 <button
                   type="button"
-                  onClick={() => set("is_active", !form.is_active)}
-                  className={cn(
-                    "relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/30 focus:ring-offset-2",
-                    form.is_active ? "bg-[#1e3a5f]" : "bg-slate-300"
-                  )}
-                  aria-label="Toggle active status"
+                  onClick={onClose}
+                  className="px-4 py-2.5 rounded-xl border border-[#d6cfc2] bg-white text-sm font-medium text-[#1a2a3a] hover:bg-[#f5f0e8] transition-colors"
                 >
-                  <span
-                    className={cn(
-                      "inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform",
-                      form.is_active ? "translate-x-6" : "translate-x-1"
-                    )}
-                  />
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white transition-all duration-200 disabled:opacity-60"
+                  style={{
+                    background: saving
+                      ? "#9ca3af"
+                      : "linear-gradient(135deg, #c8a96e 0%, #b8944f 100%)",
+                  }}
+                >
+                  {saving ? (
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Save className="w-4 h-4" />
+                  )}
+                  {saving ? "Saving..." : mode === "add" ? "Add Member" : "Save Changes"}
                 </button>
               </div>
-            </div>
-          </div>
-
-          {/* Footer Actions */}
-          <div className="px-6 py-4 bg-[#f5f0e8]/60 border-t border-[#d6cfc2] flex items-center justify-end gap-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 rounded-xl border border-[#d6cfc2] bg-white text-[#1a2a3a] text-sm font-medium hover:bg-[#f5f0e8] transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={() => onSave(form)}
-              disabled={loading}
-              className="flex items-center gap-2 px-5 py-2 rounded-xl bg-[#1e3a5f] hover:bg-[#162d4a] text-white text-sm font-semibold transition-colors disabled:opacity-60 shadow-[0_2px_8px_rgba(30,58,95,0.3)]"
-            >
-              {loading ? (
-                <RefreshCw className="w-4 h-4 animate-spin" />
-              ) : (
-                <Save className="w-4 h-4" />
-              )}
-              {loading ? "Saving..." : isEdit ? "Save Changes" : "Add User"}
-            </button>
-          </div>
+            </form>
+          </motion.div>
         </motion.div>
-      </motion.div>
+      )}
     </AnimatePresence>
   );
 }
 
-// ─── Delete Confirm Modal ─────────────────────────────────────────────────────
+// ─── Delete Confirmation Modal ────────────────────────────────────────────────
 
-function DeleteConfirmModal({
+function DeleteModal({
   open,
-  user,
   onClose,
   onConfirm,
-  loading,
+  userName,
+  deleting,
 }: {
   open: boolean;
-  user: UserProfile | null;
   onClose: () => void;
-  onConfirm: () => void;
-  loading: boolean;
+  onConfirm: () => Promise<void>;
+  userName: string;
+  deleting: boolean;
 }) {
-  if (!open || !user) return null;
-
   return (
     <AnimatePresence>
-      <motion.div
-        className="fixed inset-0 z-50 flex items-center justify-center p-4"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-      >
-        <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      {open && (
         <motion.div
-          className="relative z-10 w-full max-w-sm bg-white rounded-2xl shadow-[0_24px_80px_-12px_rgba(0,0,0,0.3)] overflow-hidden"
-          variants={scaleIn}
-          initial="hidden"
-          animate="visible"
-          exit="hidden"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
         >
-          <div className="p-6 text-center">
-            <div className="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
-              <Trash2 className="w-6 h-6 text-red-600" />
+          <motion.div
+            className="absolute inset-0 bg-[#1a2a3a]/60 backdrop-blur-sm"
+            variants={overlayVariants}
+            initial="hidden"
+            animate="visible"
+            exit="hidden"
+            onClick={onClose}
+          />
+          <motion.div
+            className="relative z-10 w-full max-w-sm bg-white rounded-2xl shadow-[0_8px_40px_-8px_rgba(30,58,95,0.28)] border border-[#d6cfc2] overflow-hidden"
+            variants={modalVariants}
+            initial="hidden"
+            animate="visible"
+            exit="hidden"
+          >
+            <div className="p-6">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="w-12 h-12 rounded-xl bg-red-50 border border-red-200 flex items-center justify-center flex-shrink-0">
+                  <Trash2 className="w-5 h-5 text-red-600" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-[#1e3a5f]">Delete Member</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">This action cannot be undone</p>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 mb-5">
+                <p className="text-sm text-amber-800">
+                  You are about to permanently delete{" "}
+                  <span className="font-semibold">{userName}</span>. All associated
+                  records including transactions and fines may be affected.
+                </p>
+              </div>
+
+              <div className="flex items-center justify-end gap-3">
+                <button
+                  onClick={onClose}
+                  className="px-4 py-2.5 rounded-xl border border-[#d6cfc2] bg-white text-sm font-medium text-[#1a2a3a] hover:bg-[#f5f0e8] transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={onConfirm}
+                  disabled={deleting}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-sm font-semibold text-white transition-colors disabled:opacity-60"
+                >
+                  {deleting ? (
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="w-4 h-4" />
+                  )}
+                  {deleting ? "Deleting..." : "Delete Member"}
+                </button>
+              </div>
             </div>
-            <h3 className="text-lg font-bold text-[#1a2a3a] mb-1">Delete User</h3>
-            <p className="text-sm text-slate-500 mb-6">
-              Are you sure you want to delete{" "}
-              <span className="font-semibold text-[#1a2a3a]">{user.full_name}</span>? This action cannot be undone.
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={onClose}
-                className="flex-1 px-4 py-2.5 rounded-xl border border-[#d6cfc2] bg-white text-[#1a2a3a] text-sm font-medium hover:bg-[#f5f0e8] transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={onConfirm}
-                disabled={loading}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-semibold transition-colors disabled:opacity-60"
-              >
-                {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                {loading ? "Deleting..." : "Delete"}
-              </button>
-            </div>
-          </div>
+          </motion.div>
         </motion.div>
-      </motion.div>
+      )}
     </AnimatePresence>
   );
 }
@@ -450,31 +537,34 @@ export default function AdminUsersPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [modalError, setModalError] = useState<string | null>(null);
 
   const [search, setSearch] = useState("");
-  const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
   const [filterRole, setFilterRole] = useState<FilterRole>("all");
+  const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
 
   const [modalOpen, setModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState<"add" | "edit">("add");
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
-  const [deleteModal, setDeleteModal] = useState<UserProfile | null>(null);
 
-  // ─── Fetch ──────────────────────────────────────────────────────────────
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deletingUser, setDeletingUser] = useState<UserProfile | null>(null);
+
+  const [toast, setToast] = useState<{ msg: string; type: "success" | "error" } | null>(null);
+
+  // ── Fetch ──────────────────────────────────────────────────────────────────
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
-    setError(null);
     try {
-      const { data, error: fetchError } = await supabase
+      const { data, error } = await supabase
         .from("users")
         .select("*")
         .order("created_at", { ascending: false });
-      if (fetchError) throw fetchError;
+      if (error) throw error;
       setUsers(data ?? []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load users.");
+      console.error("Failed to fetch users:", err);
     } finally {
       setLoading(false);
     }
@@ -484,14 +574,21 @@ export default function AdminUsersPage() {
     fetchUsers();
   }, [fetchUsers]);
 
-  // ─── Derived stats ───────────────────────────────────────────────────────
+  // ── Toast ──────────────────────────────────────────────────────────────────
 
-  const totalUsers = users.length;
-  const activeUsers = users.filter((u) => u.is_active).length;
+  function showToast(msg: string, type: "success" | "error") {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3500);
+  }
+
+  // ── Derived stats ──────────────────────────────────────────────────────────
+
+  const totalMembers = users.length;
+  const activeMembers = users.filter((u) => u.is_active).length;
   const adminUsers = users.filter((u) => u.role === "admin").length;
-  const memberUsers = users.filter((u) => u.role === "member").length;
+  const inactiveMembers = users.filter((u) => !u.is_active).length;
 
-  // ─── Filtered list ───────────────────────────────────────────────────────
+  // ── Filtered list ──────────────────────────────────────────────────────────
 
   const filtered = users.filter((u) => {
     const q = search.toLowerCase();
@@ -500,29 +597,36 @@ export default function AdminUsersPage() {
       u.full_name.toLowerCase().includes(q) ||
       u.email.toLowerCase().includes(q) ||
       (u.membership_number ?? "").toLowerCase().includes(q);
+    const matchRole = filterRole === "all" || u.role === filterRole;
     const matchStatus =
-      filterStatus === "all"
-        ? true
-        : filterStatus === "active"
-        ? u.is_active
-        : !u.is_active;
-    const matchRole =
-      filterRole === "all" ? true : u.role === filterRole;
-    return matchSearch && matchStatus && matchRole;
+      filterStatus === "all" ||
+      (filterStatus === "active" && u.is_active) ||
+      (filterStatus === "inactive" && !u.is_active);
+    return matchSearch && matchRole && matchStatus;
   });
 
-  // ─── Save (add / edit) ───────────────────────────────────────────────────
+  // ── CRUD ───────────────────────────────────────────────────────────────────
 
-  const handleSave = async (form: FormState) => {
-    if (!form.full_name.trim() || !form.email.trim()) {
-      setModalError("Full name and email are required.");
-      return;
-    }
+  async function handleSave(form: FormState) {
     setSaving(true);
     setModalError(null);
     try {
-      if (editingUser) {
-        const { error: updateError } = await supabase
+      if (modalMode === "add") {
+        const { error } = await supabase.from("users").insert([
+          {
+            full_name: form.full_name.trim(),
+            email: form.email.trim(),
+            role: form.role,
+            phone: form.phone.trim() || null,
+            address: form.address.trim() || null,
+            membership_number: form.membership_number.trim() || null,
+            is_active: form.is_active,
+          },
+        ]);
+        if (error) throw error;
+        showToast("Member added successfully.", "success");
+      } else if (editingUser) {
+        const { error } = await supabase
           .from("users")
           .update({
             full_name: form.full_name.trim(),
@@ -534,65 +638,79 @@ export default function AdminUsersPage() {
             updated_at: new Date().toISOString(),
           })
           .eq("id", editingUser.id);
-        if (updateError) throw updateError;
-      } else {
-        const { error: insertError } = await supabase.from("users").insert({
-          full_name: form.full_name.trim(),
-          email: form.email.trim(),
-          role: form.role,
-          phone: form.phone.trim() || null,
-          address: form.address.trim() || null,
-          membership_number: form.membership_number.trim() || null,
-          is_active: form.is_active,
-        });
-        if (insertError) throw insertError;
+        if (error) throw error;
+        showToast("Member updated successfully.", "success");
       }
       setModalOpen(false);
       setEditingUser(null);
       await fetchUsers();
-    } catch (err) {
-      setModalError(err instanceof Error ? err.message : "Failed to save user.");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "An error occurred.";
+      setModalError(msg);
     } finally {
       setSaving(false);
     }
-  };
+  }
 
-  // ─── Delete ──────────────────────────────────────────────────────────────
-
-  const handleDelete = async () => {
-    if (!deleteModal) return;
-    setDeleting(true);
+  async function handleToggleActive(user: UserProfile) {
     try {
-      const { error: deleteError } = await supabase
+      const { error } = await supabase
         .from("users")
-        .delete()
-        .eq("id", deleteModal.id);
-      if (deleteError) throw deleteError;
-      setDeleteModal(null);
+        .update({ is_active: !user.is_active, updated_at: new Date().toISOString() })
+        .eq("id", user.id);
+      if (error) throw error;
+      showToast(
+        `${user.full_name} marked as ${!user.is_active ? "active" : "inactive"}.`,
+        "success"
+      );
       await fetchUsers();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete user.");
-      setDeleteModal(null);
+      console.error(err);
+      showToast("Failed to update status.", "error");
+    }
+  }
+
+  async function handleDelete() {
+    if (!deletingUser) return;
+    setDeleting(true);
+    try {
+      const { error } = await supabase
+        .from("users")
+        .delete()
+        .eq("id", deletingUser.id);
+      if (error) throw error;
+      showToast("Member deleted.", "success");
+      setDeleteOpen(false);
+      setDeletingUser(null);
+      await fetchUsers();
+    } catch (err) {
+      console.error(err);
+      showToast("Failed to delete member.", "error");
     } finally {
       setDeleting(false);
     }
-  };
-
-  // ─── Open modal helpers ──────────────────────────────────────────────────
+  }
 
   function openAdd() {
+    setModalMode("add");
     setEditingUser(null);
     setModalError(null);
     setModalOpen(true);
   }
 
-  function openEdit(u: UserProfile) {
-    setEditingUser(u);
+  function openEdit(user: UserProfile) {
+    setModalMode("edit");
+    setEditingUser(user);
     setModalError(null);
     setModalOpen(true);
   }
 
-  const modalInitial: FormState | null = editingUser
+  function openDelete(user: UserProfile) {
+    setDeletingUser(user);
+    setDeleteOpen(true);
+  }
+
+  const editForm: FormState | null = editingUser
     ? {
         full_name: editingUser.full_name,
         email: editingUser.email,
@@ -604,317 +722,457 @@ export default function AdminUsersPage() {
       }
     : null;
 
-  // ─── Render ──────────────────────────────────────────────────────────────
+  // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
     <div className="min-h-screen bg-[#f5f0e8]">
-      {/* ── Page Header ── */}
-      <div className="bg-gradient-to-br from-[#1e3a5f] via-[#1e3a5f] to-[#2d5a8e] px-6 py-10 md:py-14">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      {/* ── Page Header ─────────────────────────────────────────────────── */}
+      <div
+        className="relative overflow-hidden"
+        style={{
+          background: "linear-gradient(135deg, #0f1f33 0%, #1e3a5f 50%, #2a4f7c 100%)",
+        }}
+      >
+        {/* Decorative glow */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden">
+          <div
+            className="absolute -top-32 -right-32 w-80 h-80 rounded-full opacity-10"
+            style={{ background: "radial-gradient(circle, #c8a96e, transparent)" }}
+          />
+          <div
+            className="absolute -bottom-16 -left-16 w-64 h-64 rounded-full opacity-5"
+            style={{ background: "radial-gradient(circle, #ffffff, transparent)" }}
+          />
+        </div>
+
+        <div className="container-lms relative py-10">
+          {/* Breadcrumb */}
+          <div className="flex items-center gap-2 text-white/50 text-xs font-medium mb-4">
+            <BookOpen className="w-3.5 h-3.5" />
+            <span>Admin Panel</span>
+            <ChevronRight className="w-3 h-3" />
+            <span className="text-[#c8a96e]">User Management</span>
+          </div>
+
+          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-5">
             <div>
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-8 h-8 rounded-lg bg-[#c8a96e]/20 flex items-center justify-center">
-                  <Users className="w-4 h-4 text-[#c8a96e]" />
-                </div>
-                <span className="text-[#c8a96e] text-xs font-semibold uppercase tracking-widest">
-                  Admin Panel
-                </span>
-              </div>
               <h1 className="text-2xl md:text-3xl font-bold text-white tracking-tight">
                 User Management
               </h1>
-              <p className="text-white/60 text-sm mt-1">
-                Manage library members, roles, and account status
+              <p className="text-white/60 text-sm mt-1.5 max-w-lg">
+                Manage library members, roles, and access control —{" "}
+                <span className="text-[#c8a96e]/80">
+                  User Collection · LMS Database Module (Chapter 5)
+                </span>
               </p>
             </div>
-            <button
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
               onClick={openAdd}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#c8a96e] hover:bg-[#b8944f] text-[#1a2a3a] text-sm font-bold transition-all shadow-[0_4px_16px_rgba(200,169,110,0.35)] hover:shadow-[0_6px_24px_rgba(200,169,110,0.45)] hover:-translate-y-0.5"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-[#1a2a3a] shadow-lg flex-shrink-0 transition-all duration-200"
+              style={{
+                background: "linear-gradient(135deg, #c8a96e 0%, #b8944f 100%)",
+                boxShadow: "0 4px 20px rgba(200,169,110,0.4)",
+              }}
             >
               <Plus className="w-4 h-4" />
-              Add User
-            </button>
+              Add New Member
+            </motion.button>
           </div>
+
+          {/* Stats row */}
+          <motion.div
+            variants={staggerContainer}
+            initial="hidden"
+            animate="visible"
+            className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8"
+          >
+            {[
+              {
+                icon: Users,
+                label: "Total Members",
+                value: totalMembers,
+                iconBg: "bg-white/10",
+                iconColor: "text-white",
+                border: "border-white/10",
+              },
+              {
+                icon: UserCheck,
+                label: "Active Members",
+                value: activeMembers,
+                iconBg: "bg-emerald-500/20",
+                iconColor: "text-emerald-300",
+                border: "border-emerald-500/20",
+              },
+              {
+                icon: Crown,
+                label: "Admin Users",
+                value: adminUsers,
+                iconBg: "bg-[#c8a96e]/20",
+                iconColor: "text-[#c8a96e]",
+                border: "border-[#c8a96e]/20",
+              },
+              {
+                icon: UserX,
+                label: "Inactive Members",
+                value: inactiveMembers,
+                iconBg: "bg-red-500/20",
+                iconColor: "text-red-300",
+                border: "border-red-500/20",
+              },
+            ].map((s) => (
+              <motion.div
+                key={s.label}
+                variants={fadeInUp}
+                className={cn(
+                  "flex items-center gap-3 rounded-xl border px-4 py-3 bg-white/5 backdrop-blur-sm",
+                  s.border
+                )}
+              >
+                <div
+                  className={cn(
+                    "w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0",
+                    s.iconBg
+                  )}
+                >
+                  <s.icon className={cn("w-4 h-4", s.iconColor)} />
+                </div>
+                <div>
+                  <p className="text-xl font-bold text-white leading-none">{s.value}</p>
+                  <p className="text-white/50 text-xs mt-0.5">{s.label}</p>
+                </div>
+              </motion.div>
+            ))}
+          </motion.div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8 space-y-6">
-        {/* ── Error Banner ── */}
-        {error && (
-          <div className="flex items-center gap-3 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
-            <AlertCircle className="w-4 h-4 flex-shrink-0" />
-            <span>{error}</span>
-            <button onClick={() => setError(null)} className="ml-auto">
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        )}
-
-        {/* ── Stats ── */}
-        <motion.div
-          variants={staggerContainer}
-          initial="hidden"
-          animate="visible"
-          className="grid grid-cols-2 lg:grid-cols-4 gap-4"
-        >
-          <motion.div variants={fadeInUp}>
-            <StatCard
-              icon={Users}
-              label="Total Users"
-              value={totalUsers}
-              iconBg="bg-[#1e3a5f]/10"
-              iconColor="text-[#1e3a5f]"
-            />
-          </motion.div>
-          <motion.div variants={fadeInUp}>
-            <StatCard
-              icon={UserCheck}
-              label="Active Members"
-              value={activeUsers}
-              iconBg="bg-emerald-100"
-              iconColor="text-emerald-600"
-            />
-          </motion.div>
-          <motion.div variants={fadeInUp}>
-            <StatCard
-              icon={Crown}
-              label="Administrators"
-              value={adminUsers}
-              iconBg="bg-[#c8a96e]/15"
-              iconColor="text-[#c8a96e]"
-            />
-          </motion.div>
-          <motion.div variants={fadeInUp}>
-            <StatCard
-              icon={UserX}
-              label="Inactive Accounts"
-              value={totalUsers - activeUsers}
-              iconBg="bg-red-100"
-              iconColor="text-red-500"
-            />
-          </motion.div>
-        </motion.div>
-
-        {/* ── Filters ── */}
+      {/* ── Main Content ─────────────────────────────────────────────────── */}
+      <div className="container-lms py-8 space-y-6">
+        {/* Search & Filter Bar */}
         <Reveal>
           <div className="bg-white rounded-2xl border border-[#d6cfc2] shadow-[0_1px_2px_rgba(0,0,0,0.04),0_4px_16px_-4px_rgba(0,0,0,0.08)] p-4">
-            <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex flex-col md:flex-row gap-3">
               {/* Search */}
               <div className="relative flex-1">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <input
                   type="text"
+                  placeholder="Search by name, email, or membership number..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search by name, email, or membership number..."
-                  className="w-full pl-9 pr-3 py-2.5 rounded-xl border border-[#d6cfc2] bg-[#f5f0e8]/50 text-[#1a2a3a] text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/20 focus:border-[#1e3a5f] transition-all"
+                  className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-[#d6cfc2] bg-[#f5f0e8]/60 text-sm text-[#1a2a3a] placeholder:text-slate-400 focus:border-[#1e3a5f] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/10 transition-all duration-200"
                 />
               </div>
 
-              {/* Status filter */}
-              <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value as FilterStatus)}
-                className="px-3 py-2.5 rounded-xl border border-[#d6cfc2] bg-white text-[#1a2a3a] text-sm focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/20 focus:border-[#1e3a5f] transition-all cursor-pointer"
-              >
-                <option value="all">All Status</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </select>
-
               {/* Role filter */}
-              <select
-                value={filterRole}
-                onChange={(e) => setFilterRole(e.target.value as FilterRole)}
-                className="px-3 py-2.5 rounded-xl border border-[#d6cfc2] bg-white text-[#1a2a3a] text-sm focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/20 focus:border-[#1e3a5f] transition-all cursor-pointer"
-              >
-                <option value="all">All Roles</option>
-                <option value="member">Members</option>
-                <option value="admin">Admins</option>
-              </select>
+              <div className="relative">
+                <Shield className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <select
+                  value={filterRole}
+                  onChange={(e) => setFilterRole(e.target.value as FilterRole)}
+                  className="pl-9 pr-8 py-2.5 rounded-xl border border-[#d6cfc2] bg-[#f5f0e8]/60 text-sm text-[#1a2a3a] focus:border-[#1e3a5f] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/10 transition-all duration-200 appearance-none cursor-pointer"
+                >
+                  <option value="all">All Roles</option>
+                  <option value="member">Member</option>
+                  <option value="admin">Admin</option>
+                </select>
+                <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+              </div>
+
+              {/* Status filter */}
+              <div className="relative">
+                <CheckCircle className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <select
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value as FilterStatus)}
+                  className="pl-9 pr-8 py-2.5 rounded-xl border border-[#d6cfc2] bg-[#f5f0e8]/60 text-sm text-[#1a2a3a] focus:border-[#1e3a5f] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#1e3a5f]/10 transition-all duration-200 appearance-none cursor-pointer"
+                >
+                  <option value="all">All Status</option>
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+                <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+              </div>
 
               {/* Refresh */}
               <button
                 onClick={fetchUsers}
-                disabled={loading}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#d6cfc2] bg-white text-[#1e3a5f] text-sm font-medium hover:bg-[#f5f0e8] transition-colors disabled:opacity-50"
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-[#d6cfc2] bg-white text-sm font-medium text-[#1e3a5f] hover:bg-[#f5f0e8] transition-colors"
               >
                 <RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} />
-                <span className="hidden sm:inline">Refresh</span>
+                Refresh
               </button>
+            </div>
+
+            {/* Results count */}
+            <div className="mt-3 flex items-center gap-2">
+              <span className="text-xs text-slate-500">
+                Showing{" "}
+                <span className="font-semibold text-[#1e3a5f]">{filtered.length}</span>{" "}
+                of{" "}
+                <span className="font-semibold text-[#1e3a5f]">{totalMembers}</span>{" "}
+                members
+              </span>
+              {(search || filterRole !== "all" || filterStatus !== "all") && (
+                <button
+                  onClick={() => {
+                    setSearch("");
+                    setFilterRole("all");
+                    setFilterStatus("all");
+                  }}
+                  className="text-xs text-[#c8a96e] hover:text-[#b8944f] font-medium transition-colors"
+                >
+                  Clear filters
+                </button>
+              )}
             </div>
           </div>
         </Reveal>
 
-        {/* ── Table ── */}
+        {/* Users Table */}
         <Reveal>
           <div className="bg-white rounded-2xl border border-[#d6cfc2] shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_-8px_rgba(0,0,0,0.10)] overflow-hidden">
-            {/* Table header bar */}
-            <div className="px-5 py-4 border-b border-[#d6cfc2] flex items-center justify-between">
-              <div>
-                <h2 className="text-sm font-bold text-[#1e3a5f]">Library Members</h2>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  {filtered.length} of {totalUsers} users
-                </p>
-              </div>
-              <button
-                onClick={openAdd}
-                className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1e3a5f] hover:bg-[#162d4a] text-white text-xs font-semibold transition-colors"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                Add User
-              </button>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr
+                    className="border-b border-[#ede8df]"
+                    style={{ background: "linear-gradient(135deg, #f5f0e8 0%, #ede8df 100%)" }}
+                  >
+                    {[
+                      "Member",
+                      "Email",
+                      "Role",
+                      "Membership No.",
+                      "Phone",
+                      "Status",
+                      "Joined",
+                      "Actions",
+                    ].map((col) => (
+                      <th
+                        key={col}
+                        className="px-5 py-3.5 text-left text-xs font-semibold uppercase tracking-wider text-[#1e3a5f]"
+                      >
+                        {col}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading ? (
+                    <TableSkeleton />
+                  ) : filtered.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} className="px-5 py-16 text-center">
+                        <div className="flex flex-col items-center gap-3">
+                          <div className="w-14 h-14 rounded-2xl bg-[#f5f0e8] border border-[#d6cfc2] flex items-center justify-center">
+                            <Users className="w-6 h-6 text-slate-400" />
+                          </div>
+                          <p className="text-sm font-semibold text-[#1e3a5f]">
+                            {search || filterRole !== "all" || filterStatus !== "all"
+                              ? "No members match your filters"
+                              : "No members found"}
+                          </p>
+                          <p className="text-xs text-slate-400">
+                            {search || filterRole !== "all" || filterStatus !== "all"
+                              ? "Try adjusting your search or filters."
+                              : "Add your first library member to get started."}
+                          </p>
+                          {!(search || filterRole !== "all" || filterStatus !== "all") && (
+                            <button
+                              onClick={openAdd}
+                              className="mt-1 flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white"
+                              style={{
+                                background:
+                                  "linear-gradient(135deg, #c8a96e 0%, #b8944f 100%)",
+                              }}
+                            >
+                              <Plus className="w-4 h-4" />
+                              Add First Member
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    filtered.map((user) => (
+                      <motion.tr
+                        key={user.id}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="border-b border-[#ede8df] hover:bg-[#faf8f4] transition-colors duration-150 group"
+                      >
+                        {/* Member */}
+                        <td className="px-5 py-4">
+                          <div className="flex items-center gap-3">
+                            <div
+                              className={cn(
+                                "w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0",
+                                getAvatarColor(user.full_name)
+                              )}
+                            >
+                              {getInitials(user.full_name)}
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-1.5">
+                                {user.role === "admin" ? (
+                                  <Crown className="w-3.5 h-3.5 text-[#c8a96e]" />
+                                ) : (
+                                  <User className="w-3.5 h-3.5 text-slate-400" />
+                                )}
+                                <span className="text-sm font-semibold text-[#1e3a5f]">
+                                  {user.full_name}
+                                </span>
+                              </div>
+                              <p className="text-xs text-slate-400 mt-0.5">
+                                ID: {user.id.slice(0, 8)}...
+                              </p>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Email */}
+                        <td className="px-5 py-4">
+                          <div className="flex items-center gap-1.5">
+                            <Mail className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                            <span className="text-sm text-[#1a2a3a]">{user.email}</span>
+                          </div>
+                        </td>
+
+                        {/* Role */}
+                        <td className="px-5 py-4">
+                          {user.role === "admin" ? (
+                            <span className="inline-flex items-center gap-1.5 rounded-full border border-[#c8a96e]/40 bg-[#1e3a5f] px-2.5 py-1 text-xs font-semibold text-[#c8a96e]">
+                              <Crown className="w-3 h-3" />
+                              Admin
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">
+                              <User className="w-3 h-3" />
+                              Member
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Membership No. */}
+                        <td className="px-5 py-4">
+                          {user.membership_number ? (
+                            <div className="flex items-center gap-1.5">
+                              <Hash className="w-3.5 h-3.5 text-slate-400" />
+                              <span className="text-sm font-mono text-[#1a2a3a]">
+                                {user.membership_number}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-slate-400 italic">Not assigned</span>
+                          )}
+                        </td>
+
+                        {/* Phone */}
+                        <td className="px-5 py-4">
+                          {user.phone ? (
+                            <div className="flex items-center gap-1.5">
+                              <Phone className="w-3.5 h-3.5 text-slate-400" />
+                              <span className="text-sm text-[#1a2a3a]">{user.phone}</span>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-slate-400 italic">N/A</span>
+                          )}
+                        </td>
+
+                        {/* Status */}
+                        <td className="px-5 py-4">
+                          {user.is_active ? (
+                            <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                              Active
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700">
+                              <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                              Inactive
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Joined */}
+                        <td className="px-5 py-4">
+                          <span className="text-sm text-slate-500">
+                            {formatDate(user.created_at)}
+                          </span>
+                        </td>
+
+                        {/* Actions */}
+                        <td className="px-5 py-4">
+                          <div className="flex items-center gap-1.5">
+                            {/* Edit */}
+                            <motion.button
+                              whileHover={{ scale: 1.1 }}
+                              whileTap={{ scale: 0.9 }}
+                              onClick={() => openEdit(user)}
+                              title="Edit member"
+                              className="w-8 h-8 rounded-lg border border-[#d6cfc2] bg-white hover:bg-[#1e3a5f] hover:border-[#1e3a5f] hover:text-white text-[#1e3a5f] flex items-center justify-center transition-all duration-200"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </motion.button>
+
+                            {/* Toggle active */}
+                            <motion.button
+                              whileHover={{ scale: 1.1 }}
+                              whileTap={{ scale: 0.9 }}
+                              onClick={() => handleToggleActive(user)}
+                              title={user.is_active ? "Deactivate" : "Activate"}
+                              className={cn(
+                                "w-8 h-8 rounded-lg border flex items-center justify-center transition-all duration-200",
+                                user.is_active
+                                  ? "border-amber-200 bg-amber-50 text-amber-600 hover:bg-amber-500 hover:border-amber-500 hover:text-white"
+                                  : "border-emerald-200 bg-emerald-50 text-emerald-600 hover:bg-emerald-500 hover:border-emerald-500 hover:text-white"
+                              )}
+                            >
+                              {user.is_active ? (
+                                <ToggleRight className="w-3.5 h-3.5" />
+                              ) : (
+                                <ToggleLeft className="w-3.5 h-3.5" />
+                              )}
+                            </motion.button>
+
+                            {/* Delete */}
+                            <motion.button
+                              whileHover={{ scale: 1.1 }}
+                              whileTap={{ scale: 0.9 }}
+                              onClick={() => openDelete(user)}
+                              title="Delete member"
+                              className="w-8 h-8 rounded-lg border border-red-200 bg-red-50 text-red-600 hover:bg-red-600 hover:border-red-600 hover:text-white flex items-center justify-center transition-all duration-200"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </motion.button>
+                          </div>
+                        </td>
+                      </motion.tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
             </div>
 
-            {loading ? (
-              <div className="flex items-center justify-center py-20">
-                <div className="flex flex-col items-center gap-3">
-                  <RefreshCw className="w-8 h-8 text-[#1e3a5f] animate-spin" />
-                  <p className="text-sm text-slate-500">Loading users...</p>
-                </div>
-              </div>
-            ) : filtered.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-20 text-center">
-                <div className="w-16 h-16 rounded-full bg-[#f5f0e8] flex items-center justify-center mb-4">
-                  <Users className="w-7 h-7 text-slate-400" />
-                </div>
-                <p className="text-sm font-semibold text-[#1a2a3a]">No users found</p>
-                <p className="text-xs text-slate-500 mt-1">
-                  {search ? "Try adjusting your search or filters" : "Add your first user to get started"}
+            {/* Table footer */}
+            {!loading && filtered.length > 0 && (
+              <div className="px-5 py-3 border-t border-[#ede8df] bg-[#faf8f4] flex items-center justify-between">
+                <p className="text-xs text-slate-500">
+                  {filtered.length} member{filtered.length !== 1 ? "s" : ""} displayed
                 </p>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead>
-                    <tr className="bg-[#1e3a5f]/5 border-b border-[#d6cfc2]">
-                      <th className="text-left px-5 py-3 text-xs font-bold text-[#1e3a5f] uppercase tracking-wider">
-                        Member
-                      </th>
-                      <th className="text-left px-4 py-3 text-xs font-bold text-[#1e3a5f] uppercase tracking-wider hidden md:table-cell">
-                        Membership No.
-                      </th>
-                      <th className="text-left px-4 py-3 text-xs font-bold text-[#1e3a5f] uppercase tracking-wider">
-                        Role
-                      </th>
-                      <th className="text-left px-4 py-3 text-xs font-bold text-[#1e3a5f] uppercase tracking-wider">
-                        Status
-                      </th>
-                      <th className="text-left px-4 py-3 text-xs font-bold text-[#1e3a5f] uppercase tracking-wider hidden lg:table-cell">
-                        Joined
-                      </th>
-                      <th className="text-right px-5 py-3 text-xs font-bold text-[#1e3a5f] uppercase tracking-wider">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#d6cfc2]/60">
-                    <AnimatePresence>
-                      {filtered.map((u, idx) => (
-                        <motion.tr
-                          key={u.id}
-                          initial={{ opacity: 0, y: 8 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0 }}
-                          transition={{ duration: 0.2, delay: idx * 0.03 }}
-                          className="hover:bg-[#f5f0e8]/60 transition-colors group"
-                        >
-                          {/* Member cell */}
-                          <td className="px-5 py-3.5">
-                            <div className="flex items-center gap-3">
-                              <div
-                                className={cn(
-                                  "w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 shadow-sm",
-                                  getAvatarColor(u.full_name)
-                                )}
-                              >
-                                {getInitials(u.full_name)}
-                              </div>
-                              <div className="min-w-0">
-                                <p className="text-sm font-semibold text-[#1a2a3a] truncate">
-                                  {u.full_name}
-                                </p>
-                                <p className="text-xs text-slate-500 truncate">{u.email}</p>
-                              </div>
-                            </div>
-                          </td>
-
-                          {/* Membership number */}
-                          <td className="px-4 py-3.5 hidden md:table-cell">
-                            <span className="text-xs font-mono text-slate-600 bg-[#f5f0e8] px-2 py-1 rounded-lg">
-                              {u.membership_number ?? "—"}
-                            </span>
-                          </td>
-
-                          {/* Role badge */}
-                          <td className="px-4 py-3.5">
-                            {u.role === "admin" ? (
-                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-[#c8a96e]/15 text-[#8a6a2e] border border-[#c8a96e]/30">
-                                <Crown className="w-3 h-3" />
-                                Admin
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-[#1e3a5f]/8 text-[#1e3a5f] border border-[#1e3a5f]/15">
-                                <User className="w-3 h-3" />
-                                Member
-                              </span>
-                            )}
-                          </td>
-
-                          {/* Status badge */}
-                          <td className="px-4 py-3.5">
-                            {u.is_active ? (
-                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                <CheckCircle className="w-3 h-3" />
-                                Active
-                              </span>
-                            ) : (
-                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-50 text-red-600 border border-red-200">
-                                <XCircle className="w-3 h-3" />
-                                Inactive
-                              </span>
-                            )}
-                          </td>
-
-                          {/* Joined date */}
-                          <td className="px-4 py-3.5 hidden lg:table-cell">
-                            <span className="text-xs text-slate-500">
-                              {formatDate(u.created_at)}
-                            </span>
-                          </td>
-
-                          {/* Actions */}
-                          <td className="px-5 py-3.5">
-                            <div className="flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <button
-                                onClick={() => openEdit(u)}
-                                className="w-8 h-8 rounded-lg bg-[#1e3a5f]/8 hover:bg-[#1e3a5f] text-[#1e3a5f] hover:text-white flex items-center justify-center transition-all"
-                                title="Edit user"
-                              >
-                                <Edit2 className="w-3.5 h-3.5" />
-                              </button>
-                              <button
-                                onClick={() => setDeleteModal(u)}
-                                className="w-8 h-8 rounded-lg bg-red-50 hover:bg-red-600 text-red-500 hover:text-white flex items-center justify-center transition-all"
-                                title="Delete user"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          </td>
-                        </motion.tr>
-                      ))}
-                    </AnimatePresence>
-                  </tbody>
-                </table>
+                <p className="text-xs text-slate-400">
+                  Membership format: <span className="font-mono font-medium text-[#1e3a5f]">LIB-XXXX</span>
+                </p>
               </div>
             )}
           </div>
         </Reveal>
       </div>
 
-      {/* ── Modals ── */}
+      {/* ── Modals ───────────────────────────────────────────────────────── */}
       <UserModal
         open={modalOpen}
         onClose={() => {
@@ -923,18 +1181,48 @@ export default function AdminUsersPage() {
           setModalError(null);
         }}
         onSave={handleSave}
-        initial={modalInitial}
-        loading={saving}
+        initial={editForm}
+        mode={modalMode}
+        saving={saving}
         error={modalError}
       />
 
-      <DeleteConfirmModal
-        open={!!deleteModal}
-        user={deleteModal}
-        onClose={() => setDeleteModal(null)}
+      <DeleteModal
+        open={deleteOpen}
+        onClose={() => {
+          setDeleteOpen(false);
+          setDeletingUser(null);
+        }}
         onConfirm={handleDelete}
-        loading={deleting}
+        userName={deletingUser?.full_name ?? ""}
+        deleting={deleting}
       />
+
+      {/* ── Toast ────────────────────────────────────────────────────────── */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            key="toast"
+            initial={{ opacity: 0, y: 24, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 24, scale: 0.95 }}
+            transition={{ duration: 0.25, ease: "easeOut" }}
+            className={cn(
+              "fixed bottom-6 right-6 z-[60] flex items-center gap-3 rounded-2xl border px-5 py-3.5 shadow-[0_8px_32px_-8px_rgba(0,0,0,0.25)] text-sm font-medium",
+              toast.type === "success"
+                ? "bg-white border-emerald-200 text-emerald-800"
+                : "bg-white border-red-200 text-red-800"
+            )}
+          >
+            {toast.type === "success" ? (
+              <CheckCircle className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+            ) : (
+              <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
+            )}
+            {toast.msg}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
